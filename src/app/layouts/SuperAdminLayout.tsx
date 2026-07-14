@@ -143,18 +143,16 @@ export default function SuperAdminLayout() {
               <Link
                 key={item.href}
                 to={item.href}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 group ${
-                  isActive
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 group ${isActive
                     ? "bg-blue-50 text-blue-600"
                     : "text-slate-500 hover:bg-slate-50 hover:text-slate-800"
-                }`}
+                  }`}
               >
                 <Icon
-                  className={`w-[18px] h-[18px] flex-shrink-0 ${
-                    isActive
+                  className={`w-[18px] h-[18px] flex-shrink-0 ${isActive
                       ? "text-blue-600"
                       : "text-slate-400 group-hover:text-slate-600"
-                  }`}
+                    }`}
                 />
                 <span>{item.label}</span>
                 {isActive && (

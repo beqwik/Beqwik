@@ -110,11 +110,10 @@ export default function Sidebar() {
             <Link
               key={item.tab}
               to={`/admin?tab=${item.tab}`}
-              className={`flex items-center justify-between px-4 py-3 rounded-xl text-sm font-semibold transition-all ${
-                isActive
+              className={`flex items-center justify-between px-4 py-3 rounded-xl text-sm font-semibold transition-all ${isActive
                   ? "bg-blue-50 text-blue-600 shadow-2xs"
                   : "text-slate-500 hover:bg-slate-50 hover:text-slate-800"
-              }`}
+                }`}
             >
               <div className="flex items-center gap-3">
                 <span className="text-lg leading-none">{item.icon}</span>

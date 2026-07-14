@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { getOrganizations } from "../../services/superAdmin/organizationService";
-import { Building2, CheckCircle2, XCircle } from "lucide-react";
+import { Building2, CheckCircle2, XCircle, CreditCard } from "lucide-react";
+import ConfigureRazorpayModal from "../../components/superAdmin/modals/ConfigureRazorpayModal";
 
 export default function Organizations() {
   const [organizations, setOrganizations] =
@@ -8,6 +9,9 @@ export default function Organizations() {
 
   const [loading, setLoading] =
     useState(true);
+
+  const [selectedOrg, setSelectedOrg] = useState<any>(null);
+  const [showRazorpayModal, setShowRazorpayModal] = useState(false);
 
   useEffect(() => {
     loadOrganizations();
@@ -111,7 +115,8 @@ export default function Organizations() {
                 <th className="text-left p-5">Code</th>
                 <th className="text-left p-5">Email</th>
                 <th className="text-left p-5">Phone</th>
-                <th className="text-left p-5 pr-8">Status</th>
+                <th className="text-left p-5">Status</th>
+                <th className="text-right p-5 pr-8">Actions</th>
               </tr>
             </thead>
 
@@ -136,7 +141,7 @@ export default function Organizations() {
                   <td className="p-5 text-sm text-slate-600">
                     {org.phone || "—"}
                   </td>
-                  <td className="p-5 pr-8">
+                  <td className="p-5">
                     {org.active ? (
                       <span className="inline-flex items-center gap-1 px-3 py-1 rounded-xl bg-emerald-50 text-emerald-700 text-xs font-semibold border border-emerald-100">
                         <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full" />
@@ -149,12 +154,33 @@ export default function Organizations() {
                       </span>
                     )}
                   </td>
+                  <td className="p-5 pr-8 text-right">
+                    <button
+                      onClick={() => {
+                        setSelectedOrg(org);
+                        setShowRazorpayModal(true);
+                      }}
+                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-blue-50 text-blue-700 hover:bg-blue-100 text-xs font-bold transition duration-200"
+                    >
+                      <CreditCard className="w-3.5 h-3.5" />
+                      Razorpay
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         )}
       </div>
+
+      <ConfigureRazorpayModal
+        open={showRazorpayModal}
+        onClose={() => {
+          setShowRazorpayModal(false);
+          setSelectedOrg(null);
+        }}
+        organization={selectedOrg}
+      />
     </div>
   );
 }

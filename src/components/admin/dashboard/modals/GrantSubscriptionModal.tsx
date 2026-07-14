@@ -16,6 +16,9 @@ interface GrantSubscriptionModalProps {
   subDurationMonths: string;
   setSubDurationMonths: (value: string) => void;
 
+  subPaymentMethod: string;
+  setSubPaymentMethod: (value: string) => void;
+
   addingSub: boolean;
 
   handleAddSubscription: (e: React.FormEvent<HTMLFormElement>) => void;
@@ -33,6 +36,8 @@ export default function GrantSubscriptionModal({
   setSubAmount,
   subDurationMonths,
   setSubDurationMonths,
+  subPaymentMethod,
+  setSubPaymentMethod,
   addingSub,
   handleAddSubscription,
 }: GrantSubscriptionModalProps) {
@@ -118,6 +123,20 @@ export default function GrantSubscriptionModal({
                 <option value="12">12 Months (1 Year)</option>
               </select>
             </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">
+              Payment Setup
+            </label>
+            <select
+              value={subPaymentMethod}
+              onChange={(e) => setSubPaymentMethod(e.target.value)}
+              className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#e05275]/40 bg-white"
+            >
+              <option value="manual">Paid directly to Owner (Cash/Manual)</option>
+              <option value="online_pending">Requires Online Payment by Member</option>
+            </select>
           </div>
 
           <div className="pt-4 flex gap-3">

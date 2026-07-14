@@ -50,6 +50,7 @@ export default function AdminDashboard() {
   const [subPlanName, setSubPlanName] = useState("");
   const [subAmount, setSubAmount] = useState("");
   const [subDurationMonths, setSubDurationMonths] = useState("1");
+  const [subPaymentMethod, setSubPaymentMethod] = useState("manual");
   const [addingSub, setAddingSub] = useState(false);
 
   const [alertTitle, setAlertTitle] = useState("");
@@ -164,13 +165,16 @@ export default function AdminDashboard() {
       const end = new Date();
       end.setMonth(end.getMonth() + parseInt(subDurationMonths));
 
+      const isOnlinePending = subPaymentMethod === "online_pending";
+
       const payload = {
         organization_id: organization.id,
         member_id: subMemberId,
         plan_name: subPlanName,
         amount: parseFloat(subAmount) || 0,
-        amount_paid: parseFloat(subAmount) || 0, // Write both to cover schema variance
-        status: "active",
+        amount_paid: isOnlinePending ? 0 : (parseFloat(subAmount) || 0),
+        status: isOnlinePending ? "pending" : "active",
+        payment_status: isOnlinePending ? "pending" : "success",
         start_date: start.toISOString(),
         end_date: end.toISOString(),
         created_at: new Date().toISOString(),
@@ -180,12 +184,13 @@ export default function AdminDashboard() {
 
       if (error) throw error;
 
-      alert("Subscription granted successfully!");
+      alert(isOnlinePending ? "Subscription payment request created successfully!" : "Subscription granted successfully!");
       setShowAddSub(false);
       setSubMemberId("");
       setSubPlanName("");
       setSubAmount("");
       setSubDurationMonths("1");
+      setSubPaymentMethod("manual");
       reloadDashboard();
     } catch (err) {
       console.error(err);
@@ -205,11 +210,13 @@ export default function AdminDashboard() {
     try {
       setSendingAlert(true);
       
-      // Send notification to each member
+      // Send notification to each member (include organization_id so queries can find them)
       const inserts = members.map((member) => ({
         member_id: member.id,
+        organization_id: organization.id,
         title: alertTitle,
         message: alertMessage,
+        type: "info",
         is_read: false,
         created_at: new Date().toISOString(),
       }));
@@ -471,6 +478,8 @@ export default function AdminDashboard() {
         setSubAmount={setSubAmount}
         subDurationMonths={subDurationMonths}
         setSubDurationMonths={setSubDurationMonths}
+        subPaymentMethod={subPaymentMethod}
+        setSubPaymentMethod={setSubPaymentMethod}
         addingSub={addingSub}
         handleAddSubscription={handleAddSubscription}
       />

@@ -61,10 +61,9 @@ export default function MemberLayout() {
               key={item.to}
               to={item.to}
               className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-semibold transition-all ${
-                  isActive
-                    ? "bg-blue-50 text-blue-600"
-                    : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                `flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-semibold transition-all ${isActive
+                  ? "bg-blue-50 text-blue-600"
+                  : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
                 }`
               }
             >
