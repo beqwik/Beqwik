@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { 
   Dumbbell, 
   Calendar, 
@@ -11,6 +11,18 @@ import {
   Activity,
   Trash2
 } from "lucide-react";
+import {
+  getGymSlots,
+  createGymSlot,
+  deleteGymSlot,
+  getGymEquipment,
+  createGymEquipment,
+  updateGymEquipmentStatus,
+  deleteGymEquipment,
+  getGymBookings,
+  bookGymSlot,
+  cancelGymBooking
+} from "../../../services/organization/gymService";
 
 interface GymSectionProps {
   activeTab: string;
@@ -20,19 +32,21 @@ interface GymSectionProps {
 
 interface GymSlot {
   id: string;
-  trainerName: string;
-  dayOfWeek: string;
-  startTime: string;
-  endTime: string;
-  maxCapacity: number;
+  organization_id: string;
+  trainer_name: string;
+  day_of_week: string;
+  start_time: string;
+  end_time: string;
+  max_capacity: number;
 }
 
 interface GymEquipment {
   id: string;
+  organization_id: string;
   name: string;
   category: string;
   status: "Working" | "Under Maintenance" | "Broken";
-  lastInspection: string;
+  last_inspection: string;
 }
 
 export default function GymSection({ activeTab, organizationId, members }: GymSectionProps) {
@@ -58,97 +72,81 @@ export default function GymSection({ activeTab, organizationId, members }: GymSe
   const [eqStatus, setEqStatus] = useState<"Working" | "Under Maintenance" | "Broken">("Working");
   const [eqInspection, setEqInspection] = useState(new Date().toISOString().split("T")[0]);
 
-  // Load from local storage scoped by organization
-  useEffect(() => {
+  // Loading States
+  const [loading, setLoading] = useState(true);
+
+  // Fetch all gym data from Supabase
+  const fetchData = useCallback(async () => {
     if (!organizationId) return;
+    try {
+      setLoading(true);
+      const [fetchedSlots, fetchedBookings, fetchedEquipment] = await Promise.all([
+        getGymSlots(organizationId),
+        getGymBookings(organizationId),
+        getGymEquipment(organizationId)
+      ]);
 
-    const storedSlots = localStorage.getItem(`gym_slots_${organizationId}`);
-    if (storedSlots) {
-      setSlots(JSON.parse(storedSlots));
-    } else {
-      // Default slots
-      const defaultSlots = [
-        { id: "1", trainerName: "Alex Mercer", dayOfWeek: "Monday", startTime: "07:00", endTime: "08:30", maxCapacity: 10 },
-        { id: "2", trainerName: "Sarah Connor", dayOfWeek: "Tuesday", startTime: "18:00", endTime: "19:30", maxCapacity: 12 },
-        { id: "3", trainerName: "Mike Tyson", dayOfWeek: "Wednesday", startTime: "06:00", endTime: "07:30", maxCapacity: 8 }
-      ];
-      setSlots(defaultSlots);
-      localStorage.setItem(`gym_slots_${organizationId}`, JSON.stringify(defaultSlots));
-    }
-
-    const storedBookings = localStorage.getItem(`gym_bookings_${organizationId}`);
-    if (storedBookings) {
-      setBookings(JSON.parse(storedBookings));
-    } else {
-      setBookings({});
-    }
-
-    const storedEquipment = localStorage.getItem(`gym_equipment_${organizationId}`);
-    if (storedEquipment) {
-      setEquipment(JSON.parse(storedEquipment));
-    } else {
-      // Default equipment
-      const defaultEquipment: GymEquipment[] = [
-        { id: "1", name: "Treadmill Pro-X", category: "Cardio", status: "Working", lastInspection: "2026-06-15" },
-        { id: "2", name: "Dumbbell Set (2.5kg - 30kg)", category: "Strength", status: "Working", lastInspection: "2026-06-20" },
-        { id: "3", name: "Stationary Bike v3", category: "Cardio", status: "Under Maintenance", lastInspection: "2026-06-10" },
-        { id: "4", name: "Leg Press Machine", category: "Strength", status: "Broken", lastInspection: "2026-06-22" }
-      ];
-      setEquipment(defaultEquipment);
-      localStorage.setItem(`gym_equipment_${organizationId}`, JSON.stringify(defaultEquipment));
+      setSlots(fetchedSlots);
+      setBookings(fetchedBookings);
+      setEquipment(fetchedEquipment as GymEquipment[]);
+    } catch (err) {
+      console.error("Error loading gym data:", err);
+    } finally {
+      setLoading(false);
     }
   }, [organizationId]);
 
-  // Save updates helper
-  const saveSlots = (updated: GymSlot[]) => {
-    setSlots(updated);
-    localStorage.setItem(`gym_slots_${organizationId}`, JSON.stringify(updated));
-  };
-
-  const saveBookings = (updated: Record<string, string[]>) => {
-    setBookings(updated);
-    localStorage.setItem(`gym_bookings_${organizationId}`, JSON.stringify(updated));
-  };
-
-  const saveEquipment = (updated: GymEquipment[]) => {
-    setEquipment(updated);
-    localStorage.setItem(`gym_equipment_${organizationId}`, JSON.stringify(updated));
-  };
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   // Add training slot
-  const handleAddSlot = (e: React.FormEvent) => {
+  const handleAddSlot = async (e: React.FormEvent) => {
     e.preventDefault();
-    const newSlot: GymSlot = {
-      id: Date.now().toString(),
-      trainerName,
-      dayOfWeek,
-      startTime,
-      endTime,
-      maxCapacity: parseInt(maxCapacity) || 10
-    };
-    const updated = [...slots, newSlot];
-    saveSlots(updated);
-    setShowAddSlot(false);
-    setTrainerName("");
-    setDayOfWeek("Monday");
-    setStartTime("09:00");
-    setEndTime("10:00");
-    setMaxCapacity("15");
+    if (!organizationId) return;
+
+    try {
+      setLoading(true);
+      await createGymSlot({
+        organization_id: organizationId,
+        trainer_name: trainerName,
+        day_of_week: dayOfWeek,
+        start_time: startTime,
+        end_time: endTime,
+        max_capacity: parseInt(maxCapacity) || 10
+      });
+
+      setShowAddSlot(false);
+      setTrainerName("");
+      setDayOfWeek("Monday");
+      setStartTime("09:00");
+      setEndTime("10:00");
+      setMaxCapacity("15");
+      
+      await fetchData();
+    } catch (err) {
+      console.error(err);
+      alert("Failed to create training slot");
+      setLoading(false);
+    }
   };
 
   // Delete slot
-  const handleDeleteSlot = (id: string) => {
+  const handleDeleteSlot = async (id: string) => {
     if (!confirm("Are you sure you want to remove this training slot?")) return;
-    const updated = slots.filter((s) => s.id !== id);
-    saveSlots(updated);
-    // Also remove bookings for this slot
-    const updatedBookings = { ...bookings };
-    delete updatedBookings[id];
-    saveBookings(updatedBookings);
+    try {
+      setLoading(true);
+      await deleteGymSlot(id);
+      await fetchData();
+    } catch (err) {
+      console.error(err);
+      alert("Failed to remove training slot");
+      setLoading(false);
+    }
   };
 
   // Book a slot for a member
-  const handleBookSlot = (e: React.FormEvent) => {
+  const handleBookSlot = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedSlotId || !selectedMemberId) return;
 
@@ -159,80 +157,102 @@ export default function GymSection({ activeTab, organizationId, members }: GymSe
     }
 
     const slot = slots.find((s) => s.id === selectedSlotId);
-    if (slot && currentBookings.length >= slot.maxCapacity) {
+    if (slot && currentBookings.length >= slot.max_capacity) {
       alert("This slot is already at full capacity.");
       return;
     }
 
-    const updatedBookings = {
-      ...bookings,
-      [selectedSlotId]: [...currentBookings, selectedMemberId]
-    };
-    saveBookings(updatedBookings);
-    setSelectedSlotId(null);
-    setSelectedMemberId("");
-    alert("Slot successfully booked for member!");
+    try {
+      setLoading(true);
+      await bookGymSlot(selectedSlotId, selectedMemberId);
+      setSelectedSlotId(null);
+      setSelectedMemberId("");
+      alert("Slot successfully booked for member!");
+      await fetchData();
+    } catch (err) {
+      console.error(err);
+      alert("Failed to book slot");
+      setLoading(false);
+    }
   };
 
   // Remove a booking
-  const handleCancelBooking = (slotId: string, memberId: string) => {
+  const handleCancelBooking = async (slotId: string, memberId: string) => {
     if (!confirm("Are you sure you want to remove this booking?")) return;
-    const current = bookings[slotId] || [];
-    const updatedBookings = {
-      ...bookings,
-      [slotId]: current.filter((id) => id !== memberId)
-    };
-    saveBookings(updatedBookings);
+    try {
+      setLoading(true);
+      await cancelGymBooking(slotId, memberId);
+      await fetchData();
+    } catch (err) {
+      console.error(err);
+      alert("Failed to cancel booking");
+      setLoading(false);
+    }
   };
 
   // Add Equipment
-  const handleAddEquipment = (e: React.FormEvent) => {
+  const handleAddEquipment = async (e: React.FormEvent) => {
     e.preventDefault();
-    const newEq: GymEquipment = {
-      id: Date.now().toString(),
-      name: eqName,
-      category: eqCategory,
-      status: eqStatus,
-      lastInspection: eqInspection
-    };
-    const updated = [...equipment, newEq];
-    saveEquipment(updated);
-    setShowAddEquipment(false);
-    setEqName("");
-    setEqCategory("Cardio");
-    setEqStatus("Working");
-    setEqInspection(new Date().toISOString().split("T")[0]);
+    if (!organizationId) return;
+
+    try {
+      setLoading(true);
+      await createGymEquipment({
+        organization_id: organizationId,
+        name: eqName,
+        category: eqCategory,
+        status: eqStatus,
+        last_inspection: eqInspection
+      });
+
+      setShowAddEquipment(false);
+      setEqName("");
+      setEqCategory("Cardio");
+      setEqStatus("Working");
+      setEqInspection(new Date().toISOString().split("T")[0]);
+      
+      await fetchData();
+    } catch (err) {
+      console.error(err);
+      alert("Failed to log equipment");
+      setLoading(false);
+    }
   };
 
   // Delete Equipment
-  const handleDeleteEquipment = (id: string) => {
+  const handleDeleteEquipment = async (id: string) => {
     if (!confirm("Are you sure you want to delete this equipment?")) return;
-    const updated = equipment.filter((eq) => eq.id !== id);
-    saveEquipment(updated);
+    try {
+      setLoading(true);
+      await deleteGymEquipment(id);
+      await fetchData();
+    } catch (err) {
+      console.error(err);
+      alert("Failed to delete equipment");
+      setLoading(false);
+    }
   };
 
   // Toggle Equipment Status
-  const handleToggleStatus = (id: string, currentStatus: GymEquipment["status"]) => {
+  const handleToggleStatus = async (id: string, currentStatus: GymEquipment["status"]) => {
     const statuses: GymEquipment["status"][] = ["Working", "Under Maintenance", "Broken"];
     const nextIndex = (statuses.indexOf(currentStatus) + 1) % statuses.length;
     const nextStatus = statuses[nextIndex];
 
-    const updated = equipment.map((eq) => {
-      if (eq.id === id) {
-        return { 
-          ...eq, 
-          status: nextStatus,
-          lastInspection: new Date().toISOString().split("T")[0]
-        };
-      }
-      return eq;
-    });
-    saveEquipment(updated);
+    try {
+      setLoading(true);
+      await updateGymEquipmentStatus(id, nextStatus);
+      await fetchData();
+    } catch (err) {
+      console.error(err);
+      alert("Failed to update equipment status");
+      setLoading(false);
+    }
   };
 
   // Calculate slots metrics
   const totalBookingsCount = Object.values(bookings).reduce((acc, curr) => acc + curr.length, 0);
-  const totalCapacity = slots.reduce((acc, curr) => acc + curr.maxCapacity, 0);
+  const totalCapacity = slots.reduce((acc, curr) => acc + curr.max_capacity, 0);
   const slotsEnrolledPercent = totalCapacity > 0 ? Math.round((totalBookingsCount / totalCapacity) * 100) : 0;
 
   // Calculate equipment metrics
@@ -242,8 +262,17 @@ export default function GymSection({ activeTab, organizationId, members }: GymSe
   const eqBroken = equipment.filter((e) => e.status === "Broken").length;
   const eqOperationalPercent = eqTotal > 0 ? Math.round((eqWorking / eqTotal) * 100) : 0;
 
+  if (loading && slots.length === 0 && equipment.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 space-y-4">
+        <div className="w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+        <p className="text-slate-500 text-sm font-semibold">Loading Gym details...</p>
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-8 animate-fadeIn">
+    <div className={`space-y-8 animate-fadeIn ${loading ? "opacity-60 pointer-events-none transition-opacity" : ""}`}>
       {/* ── TRAINING SLOTS TAB ── */}
       {activeTab === "slots" && (
         <div className="space-y-6">
@@ -294,14 +323,14 @@ export default function GymSection({ activeTab, organizationId, members }: GymSe
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {slots.map((slot) => {
               const currentBookedIds = bookings[slot.id] || [];
-              const vacancy = slot.maxCapacity - currentBookedIds.length;
+              const vacancy = slot.max_capacity - currentBookedIds.length;
 
               return (
                 <div key={slot.id} className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-4 hover:shadow-md transition flex flex-col justify-between">
                   <div className="space-y-3">
                     <div className="flex justify-between items-start">
                       <span className="px-2.5 py-1 bg-slate-100 text-slate-700 text-xs font-semibold rounded-full uppercase tracking-wider">
-                        {slot.dayOfWeek}
+                        {slot.day_of_week}
                       </span>
                       <button
                         onClick={() => handleDeleteSlot(slot.id)}
@@ -313,10 +342,10 @@ export default function GymSection({ activeTab, organizationId, members }: GymSe
                     </div>
 
                     <div>
-                      <h4 className="font-extrabold text-slate-900 text-lg">{slot.trainerName}</h4>
+                      <h4 className="font-extrabold text-slate-900 text-lg">{slot.trainer_name}</h4>
                       <p className="text-slate-500 text-xs mt-0.5 flex items-center gap-1">
                         <Clock className="w-3.5 h-3.5 text-slate-400" />
-                        {slot.startTime} - {slot.endTime}
+                        {slot.start_time} - {slot.end_time}
                       </p>
                     </div>
 
@@ -324,7 +353,7 @@ export default function GymSection({ activeTab, organizationId, members }: GymSe
                     <div className="space-y-2">
                       <div className="flex justify-between text-xs font-bold text-slate-500 uppercase">
                         <span>Enrolled Members</span>
-                        <span>{currentBookedIds.length} / {slot.maxCapacity}</span>
+                        <span>{currentBookedIds.length} / {slot.max_capacity}</span>
                       </div>
 
                       {currentBookedIds.length > 0 ? (
@@ -372,7 +401,7 @@ export default function GymSection({ activeTab, organizationId, members }: GymSe
             })}
 
             {slots.length === 0 && (
-              <div className="col-span-full bg-slate-50 border border-slate-200 rounded-3xl p-12 text-center text-slate-450 italic">
+              <div className="col-span-full bg-slate-50 border border-slate-200 rounded-3xl p-12 text-center text-slate-400 italic">
                 No training slots scheduled. Click "Add Training Slot" to create one.
               </div>
             )}
@@ -603,12 +632,12 @@ export default function GymSection({ activeTab, organizationId, members }: GymSe
                     <tr key={eq.id} className="hover:bg-slate-50/50">
                       <td className="px-6 py-4 font-semibold text-slate-900">{eq.name}</td>
                       <td className="px-6 py-4">
-                        <span className="px-2 py-0.5 bg-slate-100 text-slate-650 rounded text-xs">
+                        <span className="px-2 py-0.5 bg-slate-100 text-slate-600 rounded text-xs">
                           {eq.category}
                         </span>
                       </td>
                       <td className="px-6 py-4 text-slate-500 text-xs">
-                        {eq.lastInspection}
+                        {eq.last_inspection}
                       </td>
                       <td className="px-6 py-4">
                         <span
@@ -618,7 +647,7 @@ export default function GymSection({ activeTab, organizationId, members }: GymSe
                               ? "bg-green-50 text-green-700 border border-green-150"
                               : eq.status === "Under Maintenance"
                               ? "bg-amber-50 text-amber-700 border border-amber-150"
-                              : "bg-red-50 text-red-650 border border-red-150"
+                              : "bg-red-50 text-red-600 border border-red-150"
                           }`}
                           title="Click to cycle status"
                         >
