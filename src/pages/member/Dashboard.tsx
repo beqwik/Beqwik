@@ -1,10 +1,18 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { getCurrentMember, getCurrentOrganization } from "../../services/member/memberAuth";
 import { getActiveSubscription } from "../../services/member/memberSubscriptionService";
 import { getUnreadCount } from "../../services/member/memberNotificationService";
+import {
+  getGymSlots,
+  getGymBookings,
+  getGymEquipment,
+  bookGymSlot,
+  cancelGymBooking,
+} from "../../services/organization/gymService";
 import { 
-  Calendar, Users, QrCode, Sparkles, LogIn, LogOut, CheckCircle2 
+  Calendar, Users, QrCode, Sparkles, LogIn, LogOut, CheckCircle2,
+  Dumbbell, AlertTriangle, Wrench
 } from "lucide-react";
 
 function getDaysRemaining(endDate: string) {
@@ -35,6 +43,8 @@ export default function MemberDashboard() {
   const [checkInTime, setCheckInTime] = useState<string | null>(null);
   const [slots, setSlots] = useState<any[]>([]);
   const [bookings, setBookings] = useState<Record<string, string[]>>({});
+  const [gymEquipment, setGymEquipment] = useState<any[]>([]);
+  const [bookingLoading, setBookingLoading] = useState(false);
 
   useEffect(() => {
     async function fetchData() {
@@ -55,20 +65,28 @@ export default function MemberDashboard() {
     fetchData();
   }, [member?.id]);
 
-  // Load real slots & bookings created by the organization
-  useEffect(() => {
+  // Fetch gym slots, bookings, and equipment from Supabase
+  const fetchGymData = useCallback(async () => {
     if (!org?.id) return;
-    
-    const storedSlots = localStorage.getItem(`gym_slots_${org.id}`);
-    if (storedSlots) {
-      setSlots(JSON.parse(storedSlots));
-    }
-    
-    const storedBookings = localStorage.getItem(`gym_bookings_${org.id}`);
-    if (storedBookings) {
-      setBookings(JSON.parse(storedBookings));
+    try {
+      const [fetchedSlots, fetchedBookings, fetchedEquipment] = await Promise.all([
+        getGymSlots(org.id),
+        getGymBookings(org.id),
+        getGymEquipment(org.id),
+      ]);
+      setSlots(fetchedSlots);
+      setBookings(fetchedBookings);
+      setGymEquipment(fetchedEquipment);
+    } catch (e) {
+      console.error("Failed to load gym data:", e);
     }
   }, [org?.id]);
+
+  useEffect(() => {
+    if (org?.organization_type === "Gym") {
+      fetchGymData();
+    }
+  }, [org?.organization_type, fetchGymData]);
 
   const daysLeft = subscription?.end_date ? getDaysRemaining(subscription.end_date) : null;
   const planName = subscription?.subscription_plans?.name || subscription?.plan_name || null;
@@ -97,28 +115,31 @@ export default function MemberDashboard() {
     }
   };
 
-  const handleReserveSlot = (slotId: string) => {
+  const handleReserveSlot = async (slotId: string) => {
     if (!org?.id || !member?.id) return;
 
-    const currentBookings = { ...bookings };
-    const slotBookings = currentBookings[slotId] || [];
+    const slotBookings = bookings[slotId] || [];
     const isBooked = slotBookings.includes(member.id);
 
-    if (isBooked) {
-      // Cancel booking
-      currentBookings[slotId] = slotBookings.filter(id => id !== member.id);
-    } else {
-      // Reserve booking
-      const slot = slots.find(s => s.id === slotId);
-      if (slot && slotBookings.length >= slot.maxCapacity) {
-        alert("This slot is already at full capacity.");
-        return;
+    try {
+      setBookingLoading(true);
+      if (isBooked) {
+        await cancelGymBooking(slotId, member.id);
+      } else {
+        const slot = slots.find((s: any) => s.id === slotId);
+        if (slot && slotBookings.length >= slot.max_capacity) {
+          alert("This slot is already at full capacity.");
+          return;
+        }
+        await bookGymSlot(slotId, member.id);
       }
-      currentBookings[slotId] = [...slotBookings, member.id];
+      await fetchGymData();
+    } catch (e) {
+      console.error("Failed to update booking:", e);
+      alert("Failed to update booking. Please try again.");
+    } finally {
+      setBookingLoading(false);
     }
-
-    localStorage.setItem(`gym_bookings_${org.id}`, JSON.stringify(currentBookings));
-    setBookings(currentBookings);
   };
 
   const hour = new Date().getHours();
@@ -262,12 +283,12 @@ export default function MemberDashboard() {
                 No training slots scheduled by administration yet.
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {slots.map((slot) => {
+              <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 ${bookingLoading ? "opacity-60 pointer-events-none" : ""}`}>
+                {slots.map((slot: any) => {
                   const enrolledIds = bookings[slot.id] || [];
                   const currentBookedCount = enrolledIds.length;
                   const isBooked = enrolledIds.includes(member?.id || "");
-                  const vacancy = slot.maxCapacity - currentBookedCount;
+                  const vacancy = slot.max_capacity - currentBookedCount;
 
                   return (
                     <div
@@ -275,34 +296,34 @@ export default function MemberDashboard() {
                       className={`rounded-2xl border p-5 flex flex-col justify-between gap-4 transition duration-200 ${
                         isBooked
                           ? "border-blue-300 bg-blue-50/30 ring-2 ring-blue-600/10"
-                          : "border-slate-100 bg-white hover:border-slate-350"
+                          : "border-slate-100 bg-white hover:border-slate-200"
                       }`}
                     >
                       <div>
                         <div className="flex justify-between items-start">
-                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{slot.dayOfWeek}</span>
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{slot.day_of_week}</span>
                           {isBooked && <CheckCircle2 className="w-5 h-5 text-blue-600 fill-blue-50" />}
                         </div>
-                        <h4 className="font-bold text-slate-800 text-sm mt-2">Trainer: {slot.trainerName}</h4>
-                        <p className="text-xs text-slate-500 font-semibold mt-1">Time: {slot.startTime} - {slot.endTime}</p>
+                        <h4 className="font-bold text-slate-800 text-sm mt-2">Trainer: {slot.trainer_name}</h4>
+                        <p className="text-xs text-slate-500 font-semibold mt-1">Time: {slot.start_time} - {slot.end_time}</p>
                       </div>
 
                       <div className="flex items-center justify-between border-t border-slate-100/80 pt-4 mt-2">
                         <span className="text-[10px] font-medium text-slate-500 flex items-center gap-1">
-                          <Users className="w-3.5 h-3.5 text-slate-450" /> {currentBookedCount} / {slot.maxCapacity} Booked
+                          <Users className="w-3.5 h-3.5 text-slate-400" /> {currentBookedCount} / {slot.max_capacity} Booked
                         </span>
                         <button
                           onClick={() => handleReserveSlot(slot.id)}
-                          disabled={!isBooked && vacancy <= 0}
-                          className={`px-3 py-1.5 rounded-lg text-xs font-bold cursor-pointer transition ${
+                          disabled={bookingLoading || (!isBooked && vacancy <= 0)}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
                             isBooked
-                              ? "bg-slate-100 hover:bg-slate-200 text-slate-650"
+                              ? "bg-slate-100 hover:bg-slate-200 text-slate-700"
                               : vacancy <= 0
                               ? "bg-slate-50 text-slate-300 cursor-not-allowed"
                               : "bg-blue-600 hover:bg-blue-700 text-white"
                           }`}
                         >
-                          {isBooked ? "Cancel Slot" : vacancy <= 0 ? "Full" : "Reserve Slot"}
+                          {bookingLoading ? "..." : isBooked ? "Cancel Slot" : vacancy <= 0 ? "Full" : "Reserve Slot"}
                         </button>
                       </div>
                     </div>
@@ -312,6 +333,55 @@ export default function MemberDashboard() {
             )}
           </div>
         </div>
+
+        {/* Equipment Status Section */}
+        {gymEquipment.length > 0 && (
+          <div className="bg-white rounded-[2rem] border border-slate-150 shadow-[0_10px_30px_rgba(0,0,0,0.015)] overflow-hidden">
+            <div className="px-6 py-5 border-b border-slate-100 flex items-center gap-2">
+              <Dumbbell className="w-5 h-5 text-blue-600" />
+              <div>
+                <h3 className="font-bold text-slate-800 text-lg">Equipment Status</h3>
+                <p className="text-sm text-slate-400 font-medium mt-0.5">Live status of gym machines and equipment.</p>
+              </div>
+            </div>
+            <div className="p-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {gymEquipment.map((eq: any) => (
+                  <div key={eq.id} className="flex items-center gap-4 rounded-2xl border border-slate-100 bg-slate-50/40 p-4">
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                      eq.status === "Working"
+                        ? "bg-emerald-50 text-emerald-600"
+                        : eq.status === "Under Maintenance"
+                        ? "bg-amber-50 text-amber-600"
+                        : "bg-red-50 text-red-500"
+                    }`}>
+                      {eq.status === "Working" ? (
+                        <Dumbbell className="w-5 h-5" />
+                      ) : eq.status === "Under Maintenance" ? (
+                        <Wrench className="w-5 h-5" />
+                      ) : (
+                        <AlertTriangle className="w-5 h-5" />
+                      )}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="font-bold text-slate-800 text-sm truncate">{eq.name}</p>
+                      <p className="text-xs text-slate-400 mt-0.5">{eq.category}</p>
+                    </div>
+                    <span className={`ml-auto flex-shrink-0 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                      eq.status === "Working"
+                        ? "bg-emerald-50 text-emerald-700 border border-emerald-100"
+                        : eq.status === "Under Maintenance"
+                        ? "bg-amber-50 text-amber-700 border border-amber-100"
+                        : "bg-red-50 text-red-600 border border-red-100"
+                    }`}>
+                      {eq.status === "Working" ? "✓ Working" : eq.status === "Under Maintenance" ? "Maintenance" : "✕ Broken"}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Dynamic Navigation Cards */}
         <div>
