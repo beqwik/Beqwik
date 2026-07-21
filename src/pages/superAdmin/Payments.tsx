@@ -35,7 +35,7 @@ export default function Payments() {
     payments.filter(
       (payment) =>
         payment.payment_status ===
-        "success"
+        "paid"
     ).length;
 
   const failedPayments =
@@ -151,7 +151,7 @@ export default function Payments() {
                     {payment.payment_gateway}
                   </td>
                   <td className="p-5">
-                    {payment.payment_status === "success" ? (
+                    {payment.payment_status === "paid" ? (
                       <span className="inline-flex items-center gap-1 px-3 py-1 rounded-xl bg-emerald-50 text-emerald-700 text-xs font-semibold border border-emerald-100">
                         <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full" />
                         Success

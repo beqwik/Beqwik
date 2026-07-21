@@ -222,23 +222,32 @@ function SelectPlan() {
           subscription_plan_id: plan.id,
         },
         handler: async function (response: any) {
-          const paymentId = response.razorpay_payment_id;
-          
-          try {
+  console.log("========== RAZORPAY SUCCESS ==========");
+  console.log("Full Response:", response);
+
+  const paymentId = response.razorpay_payment_id;
+  console.log("Payment ID:", paymentId);
+
+  try {
             setLoading(true);
             setActivatingId(plan.id);
 
             // Invoke the Edge Function to verify payment and save records
-            const { data, error: verifyError } = await supabase.functions.invoke(
-              "razorpay-verify",
-              {
-                body: {
-                  paymentId,
-                  organizationId,
-                  subscriptionPlanId: plan.id,
-                },
-              }
-            );
+            console.log("Calling razorpay-verify...");
+           const result = await supabase.functions.invoke(
+  "razorpay-verify",
+  {
+    body: {
+      paymentId,
+      organizationId,
+      subscriptionPlanId: plan.id,
+    },
+  }
+);
+console.log("Invoke completed");
+console.log("VERIFY RESULT", result);
+
+const { data, error: verifyError } = result;
 
             if (!verifyError && data && data.success) {
               // Reload subscription state
@@ -304,11 +313,12 @@ function SelectPlan() {
             }
           } catch (verifyErr) {
             console.error("Verification failed:", verifyErr);
-            alert(
-              verifyErr instanceof Error
-                ? verifyErr.message
-                : "Payment verification failed. Please contact support."
-            );
+
+if (verifyErr instanceof Error) {
+  alert(verifyErr.message);
+} else {
+  alert(JSON.stringify(verifyErr, null, 2));
+}
           } finally {
             setLoading(false);
             setActivatingId(null);

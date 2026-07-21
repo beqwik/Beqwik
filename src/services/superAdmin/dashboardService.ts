@@ -49,7 +49,7 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     const [
       organizationsResult,
       membersResult,
-      paymentsResult,
+      subscriptionRevenueResult,
       subscriptionsResult,
       organizationTypesResult,
     ] = await Promise.all([
@@ -67,10 +67,15 @@ export async function getDashboardStats(): Promise<DashboardStats> {
           head: true,
         }),
 
-      supabase
-        .from("payments")
-        .select("amount,payment_status"),
-
+     supabase
+  .from("organization_subscriptions")
+  .select(`
+    status,
+    subscription_plans (
+      monthly_price
+    )
+  `),
+    
       supabase
         .from("organization_subscriptions")
         .select("*", {
@@ -95,8 +100,8 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     console.log("Members");
     console.log(membersResult);
 
-    console.log("Payments");
-    console.log(paymentsResult);
+    console.log("Subscription Revenue");
+    console.log(subscriptionRevenueResult);
 
     console.log("Subscriptions");
     console.log(subscriptionsResult);
@@ -109,14 +114,14 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     if (
       organizationsResult.error ||
       membersResult.error ||
-      paymentsResult.error ||
+      subscriptionRevenueResult.error ||
       subscriptionsResult.error ||
       organizationTypesResult.error
     ) {
       console.error("Dashboard Query Errors", {
         organizations: organizationsResult.error,
         members: membersResult.error,
-        payments: paymentsResult.error,
+        payments: subscriptionRevenueResult.error,
         subscriptions: subscriptionsResult.error,
         organizationTypes: organizationTypesResult.error,
       });
@@ -125,16 +130,17 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     }
 
     const totalRevenue =
-      paymentsResult.data?.reduce(
-        (total: number, payment: any) => {
-          if (payment.payment_status === "success") {
-            return total + Number(payment.amount || 0);
-          }
+  subscriptionRevenueResult.data?.reduce(
+    (total: number, subscription: any) => {
+      if (subscription.status !== "active") return total;
 
-          return total;
-        },
-        0
-      ) || 0;
+      const monthlyPrice =
+        Number(subscription.subscription_plans?.monthly_price ?? 0);
+
+      return total + monthlyPrice;
+    },
+    0
+  ) || 0;
 
     const typeMap = new Map<string, number>();
 

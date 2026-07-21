@@ -132,23 +132,31 @@ serve(async (req) => {
     }
 
     // 4. Create payments
-    const { data: payment, error: paymentError } = await supabase
-      .from("payments")
-      .insert({
-        organization_id: organizationId,
-        transaction_id: paymentId,
-        amount: plan.monthly_price,
-        payment_gateway: "razorpay",
-        payment_status: "success",
-        paid_at: today.toISOString(),
-      })
-      .select()
-      .single();
+   console.log("Inserting payment...");
 
-    if (paymentError) {
-      // Log error but don't fail the request completely since subscription is already created.
-      console.error(`Failed to record payment in DB: ${paymentError.message}`);
-    }
+const { data: payment, error: paymentError } = await supabase
+  .from("payments")
+  .insert({
+    organization_id: organizationId,
+    transaction_id: paymentId,
+    amount: plan.monthly_price,
+    payment_gateway: "razorpay",
+    payment_status: "paid",
+    paid_at: today.toISOString(),
+  })
+  .select()
+  .single();
+
+console.log("paymentError =", paymentError);
+console.log("payment =", payment);
+
+if (paymentError) {
+  throw new Error(
+    `Payments table insert failed: ${paymentError.message}`
+  );
+}
+
+console.log("Payment inserted successfully");
 
     return new Response(
       JSON.stringify({
