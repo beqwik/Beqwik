@@ -67,78 +67,134 @@ export default function MemberSubscription() {
   );
 
   const handlePay = async (sub: any) => {
-    if (!sub) return;
-    setPaymentLoading(true);
-    try {
-      // 1. Fetch public key for the organization
-      const { data: keyId, error: keyError } = await supabase.rpc("get_organization_razorpay_key", {
-        org_id: sub.organization_id,
-      });
+  if (!sub) return;
 
-      if (keyError || !keyId) {
-        alert("This organization has not configured online payments yet. Please contact the administrator.");
-        setPaymentLoading(false);
-        return;
-      }
+  setPaymentLoading(true);
 
-      // 2. Load Razorpay script
-      const loaded = await loadRazorpayScript();
-      if (!loaded) {
-        alert("Failed to load Razorpay SDK.");
-        setPaymentLoading(false);
-        return;
-      }
+  try {
+    // Load Razorpay SDK
+    const loaded = await loadRazorpayScript();
 
-      // 3. Configure checkout options
-      const options = {
-        key: keyId,
-        amount: Math.round(sub.amount * 100), // paise
-        currency: "INR",
-        name: organization?.organization_name || "Membership Payment",
-        description: `${sub.plan_name || "Subscription"} payment`,
-        prefill: {
-          name: member?.full_name || "",
-          email: member?.email || "",
-          contact: member?.phone || "",
-        },
-        handler: async function (response: any) {
-          const paymentId = response.razorpay_payment_id;
-          try {
-            // Invoke the Edge Function to verify payment and activate subscription
-            const { data, error: verifyError } = await supabase.functions.invoke(
-              "member-razorpay-verify",
-              {
-                body: {
-                  paymentId,
-                  organizationId: sub.organization_id,
-                  memberId: sub.member_id,
-                  subscriptionId: sub.id,
-                },
-              }
-            );
-
-            if (!verifyError && data && data.success) {
-              alert("Payment successful! Your subscription is now active.");
-              window.location.reload();
-            } else {
-              alert("Verification failed: " + (verifyError?.message || data?.error || "Unknown error"));
-            }
-          } catch (e: any) {
-            alert("Error during payment verification: " + e.message);
-          }
-        },
-      };
-
-      const rzp = new (window as any).Razorpay(options);
-      rzp.open();
-    } catch (err: any) {
-      console.error("Payment initiation error:", err);
-      alert("Payment initiation failed.");
-    } finally {
-      setPaymentLoading(false);
+    if (!loaded) {
+      alert("Failed to load Razorpay SDK.");
+      return;
     }
-  };
 
+    // Create Razorpay Order
+    const { data, error } = await supabase.functions.invoke(
+      "member_create_payment_order",
+      {
+        body: {
+          subscriptionId: sub.id,
+        },
+      }
+    );
+
+    if (error) throw error;
+
+    if (!data?.success) {
+      throw new Error(data?.error ?? "Unable to create payment order.");
+    }
+
+    const options = {
+      key: data.keyId,
+
+      order_id: data.orderId,
+
+      amount: data.amount,
+
+      currency: data.currency,
+
+      name:
+        organization?.organization_name ??
+        "Membership",
+
+      description:
+        sub.plan_name ??
+        "Membership Subscription",
+
+      prefill: {
+        name: member?.full_name ?? "",
+        email: member?.email ?? "",
+        contact: member?.phone ?? "",
+      },
+
+      handler: async function (response: any) {
+        try {
+
+          const verify = await supabase.functions.invoke(
+            "member_verify_payment",
+            {
+              body: {
+                razorpayOrderId:
+                  response.razorpay_order_id,
+
+                razorpayPaymentId:
+                  response.razorpay_payment_id,
+
+                razorpaySignature:
+                  response.razorpay_signature,
+              },
+            }
+          );
+
+          if (verify.error) {
+            throw verify.error;
+          }
+
+          if (!verify.data?.success) {
+            throw new Error(
+              verify.data?.error ??
+              "Payment verification failed."
+            );
+          }
+
+          alert("Payment Successful!");
+
+          window.location.reload();
+
+        } catch (err: any) {
+
+          console.error(err);
+
+          alert(
+            err.message ??
+            "Payment verification failed."
+          );
+
+        }
+      },
+
+      modal: {
+        ondismiss: function () {
+          console.log("Checkout closed.");
+        },
+      },
+
+      theme: {
+        color: "#e05275",
+      },
+    };
+
+    const razorpay = new (window as any).Razorpay(options);
+
+    razorpay.open();
+
+  } catch (err: any) {
+
+    console.error(err);
+
+    alert(
+      err.message ??
+      "Unable to initiate payment."
+    );
+
+  } finally {
+
+    setPaymentLoading(false);
+
+  }
+};
   const handleRenew = async (activeSub: any) => {
     if (!activeSub) return;
     const confirmRenew = window.confirm(`Are you sure you want to renew your ${activeSub.plan_name} for ₹${activeSub.amount}?`);
