@@ -9,7 +9,10 @@ import {
   X, 
   AlertTriangle, 
   Activity,
-  Trash2
+  Trash2,
+  UserCheck,
+  ShieldCheck,
+  UserPlus
 } from "lucide-react";
 import {
   getGymSlots,
@@ -21,7 +24,12 @@ import {
   deleteGymEquipment,
   getGymBookings,
   bookGymSlot,
-  cancelGymBooking
+  cancelGymBooking,
+  getTrainers,
+  createTrainer,
+  updateTrainerStatus,
+  deleteTrainer,
+  type Trainer
 } from "../../../services/organization/gymService";
 
 interface GymSectionProps {
@@ -72,6 +80,15 @@ export default function GymSection({ activeTab, organizationId, members }: GymSe
   const [eqStatus, setEqStatus] = useState<"Working" | "Under Maintenance" | "Broken">("Working");
   const [eqInspection, setEqInspection] = useState(new Date().toISOString().split("T")[0]);
 
+  // Trainers State
+  const [trainers, setTrainers] = useState<Trainer[]>([]);
+  const [showAddTrainer, setShowAddTrainer] = useState(false);
+  const [trainerFullName, setTrainerFullName] = useState("");
+  const [trainerEmail, setTrainerEmail] = useState("");
+  const [trainerPhone, setTrainerPhone] = useState("");
+  const [trainerSpecialization, setTrainerSpecialization] = useState("General Fitness");
+  const [trainerBio, setTrainerBio] = useState("");
+
   // Loading States
   const [loading, setLoading] = useState(true);
 
@@ -80,15 +97,17 @@ export default function GymSection({ activeTab, organizationId, members }: GymSe
     if (!organizationId) return;
     try {
       setLoading(true);
-      const [fetchedSlots, fetchedBookings, fetchedEquipment] = await Promise.all([
+      const [fetchedSlots, fetchedBookings, fetchedEquipment, fetchedTrainers] = await Promise.all([
         getGymSlots(organizationId),
         getGymBookings(organizationId),
-        getGymEquipment(organizationId)
+        getGymEquipment(organizationId),
+        getTrainers(organizationId)
       ]);
 
       setSlots(fetchedSlots);
       setBookings(fetchedBookings);
       setEquipment(fetchedEquipment as GymEquipment[]);
+      setTrainers(fetchedTrainers);
     } catch (err) {
       console.error("Error loading gym data:", err);
     } finally {
@@ -109,7 +128,7 @@ export default function GymSection({ activeTab, organizationId, members }: GymSe
       setLoading(true);
       await createGymSlot({
         organization_id: organizationId,
-        trainer_name: trainerName,
+        trainer_name: trainerName || "General Trainer",
         day_of_week: dayOfWeek,
         start_time: startTime,
         end_time: endTime,
@@ -158,7 +177,7 @@ export default function GymSection({ activeTab, organizationId, members }: GymSe
 
     const slot = slots.find((s) => s.id === selectedSlotId);
     if (slot && currentBookings.length >= slot.max_capacity) {
-      alert("This slot is already at full capacity.");
+      alert(`Capacity limit reached! Cannot book more than ${slot.max_capacity} members.`);
       return;
     }
 
@@ -169,9 +188,9 @@ export default function GymSection({ activeTab, organizationId, members }: GymSe
       setSelectedMemberId("");
       alert("Slot successfully booked for member!");
       await fetchData();
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      alert("Failed to book slot");
+      alert(err.message || "Failed to book slot");
       setLoading(false);
     }
   };
@@ -250,6 +269,66 @@ export default function GymSection({ activeTab, organizationId, members }: GymSe
     }
   };
 
+  // Add Trainer
+  const handleAddTrainer = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!organizationId) return;
+
+    try {
+      setLoading(true);
+      await createTrainer({
+        organization_id: organizationId,
+        full_name: trainerFullName,
+        email: trainerEmail,
+        phone: trainerPhone,
+        specialization: trainerSpecialization,
+        bio: trainerBio,
+        status: "Active"
+      });
+
+      setShowAddTrainer(false);
+      setTrainerFullName("");
+      setTrainerEmail("");
+      setTrainerPhone("");
+      setTrainerSpecialization("General Fitness");
+      setTrainerBio("");
+
+      await fetchData();
+    } catch (err: any) {
+      console.error(err);
+      alert("Database table 'trainers' is not initialized in Supabase yet.\n\nPlease run the SQL migration script (20260721000000_trainers_and_gym_plans.sql) in your Supabase SQL Editor.");
+      setLoading(false);
+    }
+  };
+
+  // Toggle Trainer Status
+  const handleToggleTrainerStatus = async (id: string, currentStatus: "Active" | "Inactive") => {
+    const newStatus = currentStatus === "Active" ? "Inactive" : "Active";
+    try {
+      setLoading(true);
+      await updateTrainerStatus(id, newStatus);
+      await fetchData();
+    } catch (err) {
+      console.error(err);
+      alert("Failed to update trainer status");
+      setLoading(false);
+    }
+  };
+
+  // Delete Trainer
+  const handleDeleteTrainer = async (id: string) => {
+    if (!confirm("Are you sure you want to remove this trainer?")) return;
+    try {
+      setLoading(true);
+      await deleteTrainer(id);
+      await fetchData();
+    } catch (err) {
+      console.error(err);
+      alert("Failed to delete trainer");
+      setLoading(false);
+    }
+  };
+
   // Calculate slots metrics
   const totalBookingsCount = Object.values(bookings).reduce((acc, curr) => acc + curr.length, 0);
   const totalCapacity = slots.reduce((acc, curr) => acc + curr.max_capacity, 0);
@@ -262,7 +341,7 @@ export default function GymSection({ activeTab, organizationId, members }: GymSe
   const eqBroken = equipment.filter((e) => e.status === "Broken").length;
   const eqOperationalPercent = eqTotal > 0 ? Math.round((eqWorking / eqTotal) * 100) : 0;
 
-  if (loading && slots.length === 0 && equipment.length === 0) {
+  if (loading && slots.length === 0 && equipment.length === 0 && trainers.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-20 space-y-4">
         <div className="w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
@@ -302,98 +381,133 @@ export default function GymSection({ activeTab, organizationId, members }: GymSe
               <div className="w-12 h-12 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center text-xl font-bold">
                 <Activity className="w-6 h-6" />
               </div>
-              <div>
-                <p className="text-slate-500 text-xs font-semibold uppercase tracking-wider">Capacity Booked</p>
-                <h3 className="text-2xl font-extrabold text-slate-900 mt-0.5">{slotsEnrolledPercent}%</h3>
+              <div className="w-full">
+                <div className="flex justify-between items-center">
+                  <p className="text-slate-500 text-xs font-semibold uppercase tracking-wider">Overall Capacity</p>
+                  <span className="text-xs font-bold text-slate-700">{slotsEnrolledPercent}%</span>
+                </div>
+                <div className="w-full bg-slate-100 h-2 rounded-full mt-2 overflow-hidden">
+                  <div 
+                    className={`h-full transition-all ${slotsEnrolledPercent >= 90 ? "bg-red-500" : "bg-purple-600"}`}
+                    style={{ width: `${Math.min(100, slotsEnrolledPercent)}%` }}
+                  />
+                </div>
               </div>
             </div>
           </div>
 
-          {/* MAIN GRID */}
-          <div className="flex justify-between items-center gap-4">
-            <h3 className="font-bold text-slate-800 text-lg">Training Schedules & Bookings</h3>
+          {/* ACTION BAR */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+            <div>
+              <h2 className="text-lg font-bold text-slate-900">Training Session Schedule</h2>
+              <p className="text-slate-500 text-xs mt-0.5">Manage class schedules, trainers, and strict booking capacity limits.</p>
+            </div>
             <button
               onClick={() => setShowAddSlot(true)}
-              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-semibold transition flex items-center gap-2"
+              className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-semibold transition flex items-center justify-center gap-2 shadow-md shadow-indigo-200"
             >
               <Plus className="w-4 h-4" /> Add Training Slot
             </button>
           </div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {/* SLOTS GRID */}
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {slots.map((slot) => {
-              const currentBookedIds = bookings[slot.id] || [];
-              const vacancy = slot.max_capacity - currentBookedIds.length;
+              const enrolledMemberIds = bookings[slot.id] || [];
+              const enrolledCount = enrolledMemberIds.length;
+              const isFull = enrolledCount >= slot.max_capacity;
+              const capacityPercent = Math.round((enrolledCount / slot.max_capacity) * 100);
 
               return (
-                <div key={slot.id} className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm space-y-4 hover:shadow-md transition flex flex-col justify-between">
-                  <div className="space-y-3">
-                    <div className="flex justify-between items-start">
-                      <span className="px-2.5 py-1 bg-slate-100 text-slate-700 text-xs font-semibold rounded-full uppercase tracking-wider">
+                <div 
+                  key={slot.id} 
+                  className={`bg-white rounded-2xl border ${isFull ? "border-amber-300 bg-amber-50/10" : "border-slate-200"} p-6 shadow-sm hover:shadow-md transition flex flex-col justify-between relative overflow-hidden`}
+                >
+                  {isFull && (
+                    <div className="absolute top-0 right-0 bg-red-600 text-white text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-bl-xl shadow-sm">
+                      FULL CAPACITY
+                    </div>
+                  )}
+
+                  <div>
+                    <div className="flex justify-between items-start mb-3">
+                      <span className="px-3 py-1 rounded-full bg-slate-100 text-slate-700 text-xs font-bold uppercase tracking-wider">
                         {slot.day_of_week}
                       </span>
                       <button
                         onClick={() => handleDeleteSlot(slot.id)}
-                        className="text-slate-400 hover:text-red-500 p-1"
-                        title="Remove Slot"
+                        className="text-slate-400 hover:text-red-500 transition p-1"
+                        title="Delete slot"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
 
-                    <div>
-                      <h4 className="font-extrabold text-slate-900 text-lg">{slot.trainer_name}</h4>
-                      <p className="text-slate-500 text-xs mt-0.5 flex items-center gap-1">
-                        <Clock className="w-3.5 h-3.5 text-slate-400" />
-                        {slot.start_time} - {slot.end_time}
-                      </p>
+                    <h4 className="font-extrabold text-slate-900 text-lg">{slot.trainer_name}</h4>
+
+                    <div className="flex items-center gap-2 text-slate-500 text-sm mt-2 font-medium">
+                      <Clock className="w-4 h-4 text-indigo-500" />
+                      <span>{slot.start_time} - {slot.end_time}</span>
                     </div>
 
-                    {/* BOOKINGS LIST */}
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-xs font-bold text-slate-500 uppercase">
-                        <span>Enrolled Members</span>
-                        <span>{currentBookedIds.length} / {slot.max_capacity}</span>
+                    {/* CAPACITY INDICATOR */}
+                    <div className="mt-4 pt-3 border-t border-slate-100">
+                      <div className="flex justify-between items-center text-xs font-bold mb-1.5">
+                        <span className="text-slate-500 flex items-center gap-1">
+                          <Users className="w-3.5 h-3.5 text-slate-400" /> Enrolled:
+                        </span>
+                        <span className={isFull ? "text-red-600 font-extrabold" : "text-slate-800"}>
+                          {enrolledCount} / {slot.max_capacity} {isFull ? "(Full)" : ""}
+                        </span>
                       </div>
+                      <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                        <div 
+                          className={`h-full transition-all ${isFull ? "bg-red-500" : capacityPercent >= 75 ? "bg-amber-500" : "bg-indigo-600"}`}
+                          style={{ width: `${Math.min(100, capacityPercent)}%` }}
+                        />
+                      </div>
+                    </div>
 
-                      {currentBookedIds.length > 0 ? (
-                        <div className="max-h-24 overflow-y-auto space-y-1.5 pr-1 border border-slate-50 rounded-lg p-1.5 bg-slate-50/50">
-                          {currentBookedIds.map((mId) => {
-                            const member = members.find((m) => m.id === mId);
+                    {/* ENROLLED MEMBERS LIST */}
+                    {enrolledCount > 0 && (
+                      <div className="mt-4 space-y-1">
+                        <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Booked Members</p>
+                        <div className="flex flex-wrap gap-1.5 mt-1">
+                          {enrolledMemberIds.map((mId) => {
+                            const memberObj = members.find((m) => m.id === mId);
                             return (
-                              <div key={mId} className="flex justify-between items-center bg-white border border-slate-100 rounded-md px-2 py-1 text-xs">
-                                <span className="font-medium text-slate-700 truncate max-w-[150px]">
-                                  {member?.full_name || "Unknown Member"}
-                                </span>
-                                <button
+                              <span 
+                                key={mId} 
+                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-700 text-xs font-semibold"
+                              >
+                                {memberObj?.full_name || "Member"}
+                                <button 
                                   onClick={() => handleCancelBooking(slot.id, mId)}
-                                  className="text-slate-400 hover:text-red-500 font-bold"
-                                  title="Cancel Registration"
+                                  className="hover:text-red-600 ml-1 font-bold text-xs"
+                                  title="Cancel booking"
                                 >
-                                  <X className="w-3.5 h-3.5" />
+                                  ✕
                                 </button>
-                              </div>
+                              </span>
                             );
                           })}
                         </div>
-                      ) : (
-                        <p className="text-xs text-slate-400 italic py-2 text-center bg-slate-50/20 border border-dashed border-slate-200 rounded-lg">
-                          No members registered.
-                        </p>
-                      )}
-                    </div>
+                      </div>
+                    )}
                   </div>
 
-                  <div className="pt-4 border-t border-slate-100 mt-4 flex items-center justify-between gap-4">
-                    <span className={`text-xs font-bold uppercase ${vacancy > 0 ? "text-green-600" : "text-red-500"}`}>
-                      {vacancy > 0 ? `${vacancy} spots left` : "Slot Full"}
-                    </span>
+                  {/* QUICK ENROLL ACTION */}
+                  <div className="mt-6">
                     <button
                       onClick={() => setSelectedSlotId(slot.id)}
-                      disabled={vacancy <= 0}
-                      className="px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 disabled:opacity-50 disabled:bg-slate-50 disabled:text-slate-400 rounded-lg text-xs font-bold transition flex items-center gap-1.5"
+                      disabled={isFull}
+                      className={`w-full py-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 ${
+                        isFull 
+                          ? "bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200"
+                          : "bg-indigo-50 hover:bg-indigo-100 text-indigo-700"
+                      }`}
                     >
-                      <Plus className="w-3.5 h-3.5" /> Book Member
+                      {isFull ? "🚫 Class Full" : "➕ Enroll Member"}
                     </button>
                   </div>
                 </div>
@@ -401,8 +515,10 @@ export default function GymSection({ activeTab, organizationId, members }: GymSe
             })}
 
             {slots.length === 0 && (
-              <div className="col-span-full bg-slate-50 border border-slate-200 rounded-3xl p-12 text-center text-slate-400 italic">
-                No training slots scheduled. Click "Add Training Slot" to create one.
+              <div className="col-span-full py-12 text-center bg-white rounded-2xl border border-slate-200">
+                <Calendar className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+                <p className="text-slate-500 font-semibold text-sm">No training slots scheduled.</p>
+                <p className="text-slate-400 text-xs mt-1">Click "Add Training Slot" to create your first session.</p>
               </div>
             )}
           </div>
@@ -417,47 +533,46 @@ export default function GymSection({ activeTab, organizationId, members }: GymSe
                 >
                   ✕
                 </button>
-                <h3 className="text-2xl font-bold text-slate-900 mb-2">Add Training Slot</h3>
+                <h3 className="text-2xl font-bold text-slate-900 mb-2">New Training Slot</h3>
                 <p className="text-slate-500 text-sm mb-6">Schedule a slot for group sessions or personal trainers.</p>
 
                 <form onSubmit={handleAddSlot} className="space-y-4">
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">Trainer / Instructor Name</label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="E.g., John Miller"
-                      value={trainerName}
-                      onChange={(e) => setTrainerName(e.target.value)}
-                      className="w-full px-4 py-3 rounded-xl border border-slate-250 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-700 mb-1">Day of Week</label>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">Trainer / Instructor</label>
+                    {trainers.length > 0 ? (
                       <select
-                        value={dayOfWeek}
-                        onChange={(e) => setDayOfWeek(e.target.value)}
+                        value={trainerName}
+                        onChange={(e) => setTrainerName(e.target.value)}
                         className="w-full px-4 py-3 rounded-xl border border-slate-250 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
                       >
-                        {["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"].map((d) => (
-                          <option key={d} value={d}>{d}</option>
+                        <option value="">Select a Trainer</option>
+                        {trainers.filter(t => t.status === "Active").map(t => (
+                          <option key={t.id} value={t.full_name}>{t.full_name} ({t.specialization})</option>
                         ))}
                       </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-700 mb-1">Max Capacity</label>
+                    ) : (
                       <input
-                        type="number"
-                        min="1"
+                        type="text"
                         required
-                        value={maxCapacity}
-                        onChange={(e) => setMaxCapacity(e.target.value)}
+                        placeholder="E.g., Alex Johnson"
+                        value={trainerName}
+                        onChange={(e) => setTrainerName(e.target.value)}
                         className="w-full px-4 py-3 rounded-xl border border-slate-250 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                       />
-                    </div>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">Day of Week</label>
+                    <select
+                      value={dayOfWeek}
+                      onChange={(e) => setDayOfWeek(e.target.value)}
+                      className="w-full px-4 py-3 rounded-xl border border-slate-250 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+                    >
+                      {["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"].map((d) => (
+                        <option key={d} value={d}>{d}</option>
+                      ))}
+                    </select>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
@@ -471,7 +586,6 @@ export default function GymSection({ activeTab, organizationId, members }: GymSe
                         className="w-full px-4 py-3 rounded-xl border border-slate-250 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                       />
                     </div>
-
                     <div>
                       <label className="block text-xs font-semibold text-slate-700 mb-1">End Time</label>
                       <input
@@ -482,6 +596,20 @@ export default function GymSection({ activeTab, organizationId, members }: GymSe
                         className="w-full px-4 py-3 rounded-xl border border-slate-250 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                       />
                     </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">Max Capacity (Limit)</label>
+                    <input
+                      type="number"
+                      required
+                      min="1"
+                      placeholder="15"
+                      value={maxCapacity}
+                      onChange={(e) => setMaxCapacity(e.target.value)}
+                      className="w-full px-4 py-3 rounded-xl border border-slate-250 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                    <p className="text-[11px] text-slate-400 mt-1">Bookings will automatically lock once this limit is reached.</p>
                   </div>
 
                   <div className="pt-4 flex gap-3">
@@ -504,7 +632,7 @@ export default function GymSection({ activeTab, organizationId, members }: GymSe
             </div>
           )}
 
-          {/* BOOK MEMBER MODAL */}
+          {/* ENROLL MEMBER MODAL */}
           {selectedSlotId && (
             <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 flex items-center justify-center p-4">
               <div className="bg-white rounded-3xl w-full max-w-md p-8 relative shadow-2xl animate-scaleUp">
@@ -514,8 +642,8 @@ export default function GymSection({ activeTab, organizationId, members }: GymSe
                 >
                   ✕
                 </button>
-                <h3 className="text-2xl font-bold text-slate-900 mb-2">Book Slot</h3>
-                <p className="text-slate-500 text-sm mb-6">Select a registered member to book for this training slot.</p>
+                <h3 className="text-2xl font-bold text-slate-900 mb-2">Enroll Member into Slot</h3>
+                <p className="text-slate-500 text-sm mb-6">Select an active member to assign to this session.</p>
 
                 <form onSubmit={handleBookSlot} className="space-y-4">
                   <div>
@@ -529,7 +657,7 @@ export default function GymSection({ activeTab, organizationId, members }: GymSe
                       <option value="">-- Choose Member --</option>
                       {members.map((m) => (
                         <option key={m.id} value={m.id}>
-                          {m.full_name} ({m.email})
+                          {m.full_name} ({m.email || m.phone || "No Contact"})
                         </option>
                       ))}
                     </select>
@@ -547,7 +675,7 @@ export default function GymSection({ activeTab, organizationId, members }: GymSe
                       type="submit"
                       className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-semibold transition"
                     >
-                      Confirm Booking
+                      Confirm Enrollment
                     </button>
                   </div>
                 </form>
@@ -557,97 +685,244 @@ export default function GymSection({ activeTab, organizationId, members }: GymSe
         </div>
       )}
 
-      {/* ── EQUIPMENT TRACKER TAB ── */}
+      {/* ── TRAINERS TAB ── */}
+      {activeTab === "trainers" && (
+        <div className="space-y-6">
+          {/* ACTION BAR */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+            <div>
+              <h2 className="text-lg font-bold text-slate-900">Gym Trainers & Instructors</h2>
+              <p className="text-slate-500 text-xs mt-0.5">Manage certified trainers, fitness instructors, and staff roster.</p>
+            </div>
+            <button
+              onClick={() => setShowAddTrainer(true)}
+              className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-semibold transition flex items-center justify-center gap-2 shadow-md shadow-indigo-200"
+            >
+              <UserPlus className="w-4 h-4" /> Add New Trainer
+            </button>
+          </div>
+
+          {/* TRAINERS GRID */}
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {trainers.map((trainer) => (
+              <div key={trainer.id} className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm hover:shadow-md transition">
+                <div className="flex items-start justify-between">
+                  <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-black text-xl">
+                    {trainer.full_name.charAt(0)}
+                  </div>
+                  <button
+                    onClick={() => handleToggleTrainerStatus(trainer.id, trainer.status)}
+                    className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
+                      trainer.status === "Active"
+                        ? "bg-green-50 text-green-700 border border-green-200"
+                        : "bg-slate-100 text-slate-500"
+                    }`}
+                  >
+                    {trainer.status}
+                  </button>
+                </div>
+
+                <div className="mt-4">
+                  <h3 className="font-extrabold text-slate-900 text-lg">{trainer.full_name}</h3>
+                  <span className="inline-block px-2.5 py-1 bg-indigo-50 text-indigo-700 text-xs font-bold rounded-lg mt-1">
+                    🎯 {trainer.specialization}
+                  </span>
+                  {trainer.bio && <p className="text-slate-500 text-xs mt-2 line-clamp-2">{trainer.bio}</p>}
+                </div>
+
+                <div className="mt-4 pt-3 border-t border-slate-100 space-y-1 text-xs text-slate-500">
+                  {trainer.email && <p>✉️ {trainer.email}</p>}
+                  {trainer.phone && <p>📞 {trainer.phone}</p>}
+                </div>
+
+                <div className="mt-5 pt-3 border-t border-slate-100 flex justify-end">
+                  <button
+                    onClick={() => handleDeleteTrainer(trainer.id)}
+                    className="text-slate-400 hover:text-red-500 font-bold p-1 transition flex items-center gap-1 text-xs"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" /> Remove Trainer
+                  </button>
+                </div>
+              </div>
+            ))}
+
+            {trainers.length === 0 && (
+              <div className="col-span-full py-12 text-center bg-white rounded-2xl border border-slate-200">
+                <UserCheck className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+                <p className="text-slate-500 font-semibold text-sm">No trainers added yet.</p>
+                <p className="text-slate-400 text-xs mt-1">Click "Add New Trainer" to register gym trainers.</p>
+              </div>
+            )}
+          </div>
+
+          {/* ADD TRAINER MODAL */}
+          {showAddTrainer && (
+            <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 flex items-center justify-center p-4">
+              <div className="bg-white rounded-3xl w-full max-w-md p-8 relative shadow-2xl animate-scaleUp">
+                <button
+                  onClick={() => setShowAddTrainer(false)}
+                  className="absolute right-6 top-6 text-slate-400 hover:text-slate-600 text-xl font-bold"
+                >
+                  ✕
+                </button>
+                <h3 className="text-2xl font-bold text-slate-900 mb-2">Add New Trainer</h3>
+                <p className="text-slate-500 text-sm mb-6">Register a personal trainer or group instructor.</p>
+
+                <form onSubmit={handleAddTrainer} className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">Full Name</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="E.g., Marcus Vance"
+                      value={trainerFullName}
+                      onChange={(e) => setTrainerFullName(e.target.value)}
+                      className="w-full px-4 py-3 rounded-xl border border-slate-250 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">Email (Optional)</label>
+                      <input
+                        type="email"
+                        placeholder="marcus@gym.com"
+                        value={trainerEmail}
+                        onChange={(e) => setTrainerEmail(e.target.value)}
+                        className="w-full px-4 py-3 rounded-xl border border-slate-250 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">Phone (Optional)</label>
+                      <input
+                        type="text"
+                        placeholder="+91 9876543210"
+                        value={trainerPhone}
+                        onChange={(e) => setTrainerPhone(e.target.value)}
+                        className="w-full px-4 py-3 rounded-xl border border-slate-250 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">Specialization</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="E.g., Bodybuilding, Yoga, HIIT"
+                      value={trainerSpecialization}
+                      onChange={(e) => setTrainerSpecialization(e.target.value)}
+                      className="w-full px-4 py-3 rounded-xl border border-slate-250 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">Bio / Notes</label>
+                    <textarea
+                      rows={2}
+                      placeholder="Brief info about experience or certifications..."
+                      value={trainerBio}
+                      onChange={(e) => setTrainerBio(e.target.value)}
+                      className="w-full px-4 py-3 rounded-xl border border-slate-250 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                  </div>
+
+                  <div className="pt-4 flex gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setShowAddTrainer(false)}
+                      className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-sm font-semibold transition"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-semibold transition"
+                    >
+                      Save Trainer
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── EQUIPMENT TAB ── */}
       {activeTab === "equipment" && (
         <div className="space-y-6">
           {/* STATS HEADER */}
           <div className="grid sm:grid-cols-4 gap-5">
-            <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm flex items-center gap-4">
-              <div className="w-12 h-12 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center text-xl font-bold">
-                <Dumbbell className="w-6 h-6" />
-              </div>
-              <div>
-                <p className="text-slate-500 text-xs font-semibold uppercase tracking-wider">Total Equipment</p>
-                <h3 className="text-2xl font-extrabold text-slate-900 mt-0.5">{eqTotal}</h3>
-              </div>
+            <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+              <p className="text-slate-500 text-xs font-semibold uppercase tracking-wider">Total Equipment</p>
+              <h3 className="text-2xl font-extrabold text-slate-900 mt-1">{eqTotal}</h3>
             </div>
-
-            <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm flex items-center gap-4">
-              <div className="w-12 h-12 rounded-xl bg-green-50 text-green-600 flex items-center justify-center text-xl font-bold">
-                <Check className="w-6 h-6" />
-              </div>
-              <div>
-                <p className="text-slate-500 text-xs font-semibold uppercase tracking-wider">Operational</p>
-                <h3 className="text-2xl font-extrabold text-slate-900 mt-0.5">{eqWorking} ({eqOperationalPercent}%)</h3>
-              </div>
+            <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+              <p className="text-slate-500 text-xs font-semibold uppercase tracking-wider">Working</p>
+              <h3 className="text-2xl font-extrabold text-green-600 mt-1">{eqWorking}</h3>
             </div>
-
-            <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm flex items-center gap-4">
-              <div className="w-12 h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center text-xl font-bold">
-                <Activity className="w-6 h-6" />
-              </div>
-              <div>
-                <p className="text-slate-500 text-xs font-semibold uppercase tracking-wider">Maintenance</p>
-                <h3 className="text-2xl font-extrabold text-slate-900 mt-0.5">{eqMaintenance}</h3>
-              </div>
+            <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+              <p className="text-slate-500 text-xs font-semibold uppercase tracking-wider">Maintenance</p>
+              <h3 className="text-2xl font-extrabold text-amber-600 mt-1">{eqMaintenance}</h3>
             </div>
-
-            <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm flex items-center gap-4">
-              <div className="w-12 h-12 rounded-xl bg-red-50 text-red-600 flex items-center justify-center text-xl font-bold">
-                <AlertTriangle className="w-6 h-6" />
-              </div>
-              <div>
-                <p className="text-slate-500 text-xs font-semibold uppercase tracking-wider">Broken / Out</p>
-                <h3 className="text-2xl font-extrabold text-slate-900 mt-0.5">{eqBroken}</h3>
-              </div>
+            <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+              <p className="text-slate-500 text-xs font-semibold uppercase tracking-wider">Broken</p>
+              <h3 className="text-2xl font-extrabold text-red-600 mt-1">{eqBroken}</h3>
             </div>
           </div>
 
-          {/* EQUIPMENT HEADER */}
-          <div className="flex justify-between items-center gap-4">
-            <h3 className="font-bold text-slate-800 text-lg">Equipment Inspection Status</h3>
+          {/* ACTION BAR */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+            <div>
+              <h2 className="text-lg font-bold text-slate-900">Equipment Inventory</h2>
+              <p className="text-slate-500 text-xs mt-0.5">Track fitness machines, maintenance cycles, and condition status.</p>
+            </div>
             <button
               onClick={() => setShowAddEquipment(true)}
-              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-semibold transition flex items-center gap-2"
+              className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-semibold transition flex items-center justify-center gap-2 shadow-md shadow-indigo-200"
             >
               <Plus className="w-4 h-4" /> Log Equipment
             </button>
           </div>
 
-          {/* TABLE LOG */}
+          {/* EQUIPMENT TABLE */}
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="bg-slate-50/75 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase">
+                  <tr className="bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-500 uppercase tracking-wider">
                     <th className="px-6 py-4">Equipment Name</th>
                     <th className="px-6 py-4">Category</th>
-                    <th className="px-6 py-4">Inspection Date</th>
-                    <th className="px-6 py-4">Status</th>
+                    <th className="px-6 py-4">Last Inspection</th>
+                    <th className="px-6 py-4 text-center">Status</th>
                     <th className="px-6 py-4 text-right">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 text-sm">
+                <tbody className="divide-y divide-slate-100 text-sm font-medium">
                   {equipment.map((eq) => (
-                    <tr key={eq.id} className="hover:bg-slate-50/50">
-                      <td className="px-6 py-4 font-semibold text-slate-900">{eq.name}</td>
-                      <td className="px-6 py-4">
-                        <span className="px-2 py-0.5 bg-slate-100 text-slate-600 rounded text-xs">
+                    <tr key={eq.id} className="hover:bg-slate-50/60 transition">
+                      <td className="px-6 py-4 font-bold text-slate-900 flex items-center gap-3">
+                        <Dumbbell className="w-4 h-4 text-indigo-500" />
+                        {eq.name}
+                      </td>
+                      <td className="px-6 py-4 text-slate-600">
+                        <span className="px-2.5 py-1 bg-slate-100 rounded-lg text-xs font-bold text-slate-700">
                           {eq.category}
                         </span>
                       </td>
                       <td className="px-6 py-4 text-slate-500 text-xs">
-                        {eq.last_inspection}
+                        {eq.last_inspection ? new Date(eq.last_inspection).toLocaleDateString("en-IN") : "N/A"}
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="px-6 py-4 text-center">
                         <span
                           onClick={() => handleToggleStatus(eq.id, eq.status)}
-                          className={`px-2.5 py-1 rounded-full text-xs font-semibold cursor-pointer select-none transition ${
+                          className={`px-3 py-1 rounded-full text-xs font-extrabold cursor-pointer select-none transition ${
                             eq.status === "Working"
-                              ? "bg-green-50 text-green-700 border border-green-150"
+                              ? "bg-green-50 text-green-700 border border-green-200"
                               : eq.status === "Under Maintenance"
-                              ? "bg-amber-50 text-amber-700 border border-amber-150"
-                              : "bg-red-50 text-red-600 border border-red-150"
+                              ? "bg-amber-50 text-amber-700 border border-amber-200"
+                              : "bg-red-50 text-red-600 border border-red-200"
                           }`}
                           title="Click to cycle status"
                         >

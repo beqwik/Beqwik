@@ -163,6 +163,10 @@ function Router() {
           path="/admin"
           element={<AdminDashboard />}
         />
+        <Route
+          path="/admin/dashboard"
+          element={<AdminDashboard />}
+        />
       </Route>
 
       {/* ================= SUPER ADMIN ================= */}

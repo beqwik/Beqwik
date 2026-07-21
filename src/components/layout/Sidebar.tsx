@@ -13,6 +13,7 @@ const getNavItemsForType = (type: string) => {
     return [
       ...common,
       { tab: "slots", icon: "🏋️‍♂️", label: "Training Slots" },
+      { tab: "trainers", icon: "👨‍🏫", label: "Trainers" },
       { tab: "equipment", icon: "🛠️", label: "Equipment" },
       { tab: "subscriptions", icon: "💳", label: "Memberships" },
       { tab: "notifications", icon: "🔔", label: "Send Alerts" },
@@ -102,36 +103,49 @@ export default function Sidebar() {
       )}
 
       {/* NAVIGATION LINKS */}
-      <nav className="flex-1 px-3 py-6 space-y-1 overflow-y-auto">
+      <nav className="flex-1 px-4 py-6 space-y-1.5 overflow-y-auto">
         {dynamicNavItems.map((item) => {
           const isActive = activeTab === item.tab;
-          const isLocked = !accessLoading && !hasAccess(item.tab);
+          const allowed = hasAccess(item.tab);
+
           return (
             <Link
               key={item.tab}
-              to={`/admin?tab=${item.tab}`}
-              className={`flex items-center justify-between px-4 py-3 rounded-xl text-sm font-semibold transition-all ${isActive
-                  ? "bg-blue-50 text-blue-600 shadow-2xs"
-                  : "text-slate-500 hover:bg-slate-50 hover:text-slate-800"
-                }`}
+              to={`/admin/dashboard?tab=${item.tab}`}
+              className={`flex items-center justify-between px-4 py-3 rounded-2xl text-sm font-semibold transition ${
+                isActive
+                  ? "bg-indigo-50 text-indigo-700 shadow-sm"
+                  : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+              }`}
             >
               <div className="flex items-center gap-3">
-                <span className="text-lg leading-none">{item.icon}</span>
+                <span className="text-lg">{item.icon}</span>
                 <span>{item.label}</span>
               </div>
-              {isLocked && (
-                <span className="text-xs text-slate-400 select-none">🔒</span>
+
+              {!accessLoading && !allowed && (
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-100 text-slate-400 font-bold uppercase tracking-wider">
+                  PRO
+                </span>
               )}
             </Link>
           );
         })}
       </nav>
 
-      {/* FOOTER METRIC */}
-      <div className="px-6 py-4 border-t border-slate-100 text-center">
-        <p className="text-[10px] text-slate-400 font-semibold tracking-wide">
-          Powered by Subsphere SaaS
-        </p>
+      {/* FOOTER USER BADGE */}
+      <div className="p-4 border-t border-slate-100">
+        <div className="flex items-center gap-3 px-3 py-2">
+          <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-xs font-bold text-slate-600">
+            A
+          </div>
+          <div className="truncate">
+            <p className="text-xs font-bold text-slate-800 truncate">
+              Admin Account
+            </p>
+            <p className="text-[10px] text-slate-400 truncate">Manager</p>
+          </div>
+        </div>
       </div>
     </aside>
   );

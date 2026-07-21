@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { supabase } from "../../services/supabase";
 import { registerMember } from "../../services/member/memberAuth";
+import { dashboardService } from "../../services/dashboard/dashboardService";
 import { useDashboard } from "../../hooks/useDashboard";
 import GymSection from "../../components/admin/sections/GymSection";
 import HostelMessSection from "../../components/admin/sections/HostelMessSection";
@@ -209,29 +210,23 @@ export default function AdminDashboard() {
 
     try {
       setSendingAlert(true);
-      
-      // Send notification to each member (include organization_id so queries can find them)
-      const inserts = members.map((member) => ({
-        member_id: member.id,
-        organization_id: organization.id,
-        title: alertTitle,
-        message: alertMessage,
-        type: "info",
-        is_read: false,
-        created_at: new Date().toISOString(),
-      }));
 
-      const { error } = await supabase.from("member_notifications").insert(inserts);
+      // Use dashboardService which builds correct payload without unsupported 'type' column
+      const memberIds = members.map((m) => m.id);
+      await dashboardService.sendNotification(
+        organization.id,
+        memberIds,
+        alertTitle,
+        alertMessage
+      );
 
-      if (error) throw error;
-
-      alert(`Alert broadcasted to ${members.length} members!`);
+      alert(`Alert broadcasted to ${members.length} member${members.length !== 1 ? "s" : ""}!`);
       setAlertTitle("");
       setAlertMessage("");
       reloadDashboard();
-    } catch (err) {
-      console.error(err);
-      alert("Failed to send broadcast alert");
+    } catch (err: any) {
+      console.error("Broadcast alert error:", err);
+      alert(`Failed to send broadcast alert: ${err?.message || "Unknown error"}`);
     } finally {
       setSendingAlert(false);
     }
@@ -280,11 +275,12 @@ export default function AdminDashboard() {
   const renderSectionTabs = () => {
     const type = organization?.organization_type || "";
 
-    const customTabs = ["slots", "equipment", "menu", "meals", "classes"];
+    const customTabs = ["slots", "equipment", "trainers", "menu", "meals", "classes"];
     if (customTabs.includes(activeTab) && !hasAccess(activeTab)) {
       const featureNames: Record<string, string> = {
         slots: "Training Slots",
         equipment: "Equipment Management",
+        trainers: "Trainer Management",
         menu: "Weekly Menu Planner",
         meals: "Mess Log",
         classes: "Classes & Schedule",
@@ -298,7 +294,7 @@ export default function AdminDashboard() {
     }
 
     if (type === "Gym") {
-      if (activeTab === "slots" || activeTab === "equipment") {
+      if (activeTab === "slots" || activeTab === "equipment" || activeTab === "trainers") {
         return (
           <GymSection
             activeTab={activeTab}
@@ -395,6 +391,7 @@ export default function AdminDashboard() {
       {activeTab === "subscriptions" && (
         hasAccess("subscriptions") ? (
           <SubscriptionTab
+            organizationId={organization?.id}
             memberSubscriptions={memberSubscriptions}
             members={members}
             formatCurrency={formatCurrency}

@@ -8,6 +8,7 @@ export type FeatureTab =
   | "notifications"
   | "slots"
   | "equipment"
+  | "trainers"
   | "menu"
   | "meals"
   | "classes";
@@ -20,6 +21,7 @@ const ACCESS_RULES: Record<FeatureTab, string[]> = {
   notifications: ["Pro", "Enterprise"],
   slots: ["Pro", "Enterprise"],
   equipment: ["Pro", "Enterprise"],
+  trainers: ["Pro", "Enterprise"],
   menu: ["Pro", "Enterprise"],
   meals: ["Pro", "Enterprise"],
   classes: ["Pro", "Enterprise"],

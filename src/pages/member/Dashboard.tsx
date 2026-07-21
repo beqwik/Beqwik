@@ -293,38 +293,56 @@ export default function MemberDashboard() {
                   return (
                     <div
                       key={slot.id}
-                      className={`rounded-2xl border p-5 flex flex-col justify-between gap-4 transition duration-200 ${
+                      className={`rounded-2xl border p-5 flex flex-col justify-between gap-4 transition duration-200 relative overflow-hidden ${
                         isBooked
                           ? "border-blue-300 bg-blue-50/30 ring-2 ring-blue-600/10"
-                          : "border-slate-100 bg-white hover:border-slate-200"
+                          : vacancy <= 0
+                          ? "border-amber-200 bg-amber-50/10 opacity-90"
+                          : "border-slate-150 bg-white hover:border-slate-300"
                       }`}
                     >
                       <div>
                         <div className="flex justify-between items-start">
                           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{slot.day_of_week}</span>
-                          {isBooked && <CheckCircle2 className="w-5 h-5 text-blue-600 fill-blue-50" />}
+                          {isBooked ? (
+                            <CheckCircle2 className="w-5 h-5 text-blue-600 fill-blue-50" />
+                          ) : vacancy <= 0 ? (
+                            <span className="text-[9px] font-black uppercase px-2 py-0.5 bg-red-500 text-white rounded-md">
+                              FULL
+                            </span>
+                          ) : null}
                         </div>
                         <h4 className="font-bold text-slate-800 text-sm mt-2">Trainer: {slot.trainer_name}</h4>
                         <p className="text-xs text-slate-500 font-semibold mt-1">Time: {slot.start_time} - {slot.end_time}</p>
                       </div>
 
-                      <div className="flex items-center justify-between border-t border-slate-100/80 pt-4 mt-2">
-                        <span className="text-[10px] font-medium text-slate-500 flex items-center gap-1">
-                          <Users className="w-3.5 h-3.5 text-slate-400" /> {currentBookedCount} / {slot.max_capacity} Booked
-                        </span>
-                        <button
-                          onClick={() => handleReserveSlot(slot.id)}
-                          disabled={bookingLoading || (!isBooked && vacancy <= 0)}
-                          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
-                            isBooked
-                              ? "bg-slate-100 hover:bg-slate-200 text-slate-700"
-                              : vacancy <= 0
-                              ? "bg-slate-50 text-slate-300 cursor-not-allowed"
-                              : "bg-blue-600 hover:bg-blue-700 text-white"
-                          }`}
-                        >
-                          {bookingLoading ? "..." : isBooked ? "Cancel Slot" : vacancy <= 0 ? "Full" : "Reserve Slot"}
-                        </button>
+                      <div>
+                        {/* Capacity meter */}
+                        <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden mb-2">
+                          <div 
+                            className={`h-full transition-all ${vacancy <= 0 ? "bg-red-500" : "bg-blue-600"}`}
+                            style={{ width: `${Math.min(100, Math.round((currentBookedCount / slot.max_capacity) * 100))}%` }}
+                          />
+                        </div>
+
+                        <div className="flex items-center justify-between border-t border-slate-100/80 pt-3">
+                          <span className="text-[10px] font-semibold text-slate-500 flex items-center gap-1">
+                            <Users className="w-3.5 h-3.5 text-slate-400" /> {currentBookedCount} / {slot.max_capacity} Enrolled
+                          </span>
+                          <button
+                            onClick={() => handleReserveSlot(slot.id)}
+                            disabled={bookingLoading || (!isBooked && vacancy <= 0)}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition ${
+                              isBooked
+                                ? "bg-slate-100 hover:bg-slate-200 text-slate-700"
+                                : vacancy <= 0
+                                ? "bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200"
+                                : "bg-blue-600 hover:bg-blue-700 text-white shadow-sm"
+                            }`}
+                          >
+                            {bookingLoading ? "..." : isBooked ? "Cancel" : vacancy <= 0 ? "Class Full" : "Reserve Slot"}
+                          </button>
+                        </div>
                       </div>
                     </div>
                   );

@@ -28,6 +28,19 @@ export interface GymBooking {
   created_at?: string;
 }
 
+export interface Trainer {
+  id: string;
+  organization_id: string;
+  full_name: string;
+  email?: string;
+  phone?: string;
+  specialization: string;
+  bio?: string;
+  status: "Active" | "Inactive";
+  created_at?: string;
+}
+
+// --- SLOTS ---
 export async function getGymSlots(organizationId: string): Promise<GymSlot[]> {
   const { data, error } = await supabase
     .from("gym_slots")
@@ -59,6 +72,7 @@ export async function deleteGymSlot(slotId: string): Promise<void> {
   if (error) throw error;
 }
 
+// --- EQUIPMENT ---
 export async function getGymEquipment(organizationId: string): Promise<GymEquipment[]> {
   const { data, error } = await supabase
     .from("gym_equipment")
@@ -102,6 +116,51 @@ export async function deleteGymEquipment(equipmentId: string): Promise<void> {
   if (error) throw error;
 }
 
+// --- TRAINERS ---
+export async function getTrainers(organizationId: string): Promise<Trainer[]> {
+  const { data, error } = await supabase
+    .from("trainers")
+    .select("*")
+    .eq("organization_id", organizationId)
+    .order("created_at", { ascending: false });
+  
+  if (error) {
+    console.warn("Could not fetch trainers table:", error.message);
+    return [];
+  }
+  return data || [];
+}
+
+export async function createTrainer(trainer: Omit<Trainer, "id">): Promise<Trainer> {
+  const { data, error } = await supabase
+    .from("trainers")
+    .insert(trainer)
+    .select()
+    .single();
+  
+  if (error) throw error;
+  return data;
+}
+
+export async function updateTrainerStatus(trainerId: string, status: "Active" | "Inactive"): Promise<void> {
+  const { error } = await supabase
+    .from("trainers")
+    .update({ status })
+    .eq("id", trainerId);
+  
+  if (error) throw error;
+}
+
+export async function deleteTrainer(trainerId: string): Promise<void> {
+  const { error } = await supabase
+    .from("trainers")
+    .delete()
+    .eq("id", trainerId);
+  
+  if (error) throw error;
+}
+
+// --- BOOKINGS ---
 export async function getGymBookings(organizationId: string): Promise<Record<string, string[]>> {
   const { data, error } = await supabase
     .from("gym_slots")
@@ -121,6 +180,20 @@ export async function getGymBookings(organizationId: string): Promise<Record<str
 }
 
 export async function bookGymSlot(slotId: string, memberId: string): Promise<void> {
+  // Check capacity limits before booking
+  const { data: slot, error: slotErr } = await supabase
+    .from("gym_slots")
+    .select("max_capacity, gym_slot_bookings(id)")
+    .eq("id", slotId)
+    .single();
+
+  if (slotErr) throw slotErr;
+
+  const currentBookings = slot.gym_slot_bookings?.length || 0;
+  if (currentBookings >= slot.max_capacity) {
+    throw new Error(`Booking failed: Class capacity limit of ${slot.max_capacity} reached.`);
+  }
+
   const { error } = await supabase
     .from("gym_slot_bookings")
     .insert({ slot_id: slotId, member_id: memberId });
