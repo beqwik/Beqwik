@@ -19,6 +19,8 @@ import GrantSubscriptionModal from "../../components/admin/dashboard/modals/Gran
 import usePlanAccess from "../../hooks/usePlanAccess";
 import UpgradePrompt from "../../components/admin/dashboard/UpgradePrompt";
 
+import { getGymPlans } from "../../services/organization/planService";
+
 export default function AdminDashboard() {
   console.log("========== DASHBOARD ==========");
   
@@ -37,6 +39,15 @@ export default function AdminDashboard() {
     notifications: recentNotifications,
     reloadDashboard,
   } = useDashboard();
+
+  // Predefined gym plans state
+  const [gymPlans, setGymPlans] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (organization?.id) {
+      getGymPlans(organization.id).then(setGymPlans).catch(console.error);
+    }
+  }, [organization?.id]);
 
   // Modal / Form states
   const [showAddMember, setShowAddMember] = useState(false);
@@ -355,17 +366,19 @@ export default function AdminDashboard() {
   return (
     <div className="space-y-8">
       {/* ── OVERVIEW TAB ── */}
-     <OverviewTab
-    organization={organization}
-    orgSubscription={orgSubscription}
-    members={members}
-    memberSubscriptions={memberSubscriptions}
-    recentNotifications={recentNotifications}
-    formatCurrency={formatCurrency}
-    formatDate={formatDate}
-    onAddMember={() => setShowAddMember(true)}
-    onGrantSubscription={() => setShowAddSub(true)}
-/>
+      {activeTab === "overview" && (
+        <OverviewTab
+          organization={organization}
+          orgSubscription={orgSubscription}
+          members={members}
+          memberSubscriptions={memberSubscriptions}
+          recentNotifications={recentNotifications}
+          formatCurrency={formatCurrency}
+          formatDate={formatDate}
+          onAddMember={() => setShowAddMember(true)}
+          onGrantSubscription={() => setShowAddSub(true)}
+        />
+      )}
 
       {/* ── MEMBERS TAB ── */}
       {activeTab === "members" && (
@@ -467,6 +480,7 @@ export default function AdminDashboard() {
         open={showAddSub}
         onClose={() => setShowAddSub(false)}
         members={members}
+        plans={gymPlans}
         subMemberId={subMemberId}
         setSubMemberId={setSubMemberId}
         subPlanName={subPlanName}

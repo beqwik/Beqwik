@@ -257,9 +257,15 @@ export default function MemberDashboard() {
             </div>
           ) : (
             <div className="bg-white rounded-[2rem] border-2 border-dashed border-slate-200 p-8 flex flex-col items-center justify-center text-center">
-              <div className="text-5xl mb-4">📭</div>
+              <div className="text-5xl mb-3">💳</div>
               <h3 className="font-bold text-slate-800 text-lg mb-1">No Active Subscription</h3>
-              <p className="text-slate-400 text-sm max-w-xs">Contact your gym administration to get subscribed and unlock training reservations.</p>
+              <p className="text-slate-400 text-xs max-w-xs mb-4">View plans created by gym administration to purchase and activate your membership.</p>
+              <Link
+                to="/member/subscription"
+                className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition shadow-md shadow-blue-500/10 flex items-center gap-1.5"
+              >
+                View & Purchase Membership Plans →
+              </Link>
             </div>
           )}
         </div>

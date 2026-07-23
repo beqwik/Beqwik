@@ -1,5 +1,6 @@
-import { createClient } from "@supabase/supabase-js";
 import fs from "fs";
+import path from "path";
+import { createRequire } from "module";
 
 const envContent = fs.readFileSync(".env", "utf8");
 const env = {};
@@ -10,20 +11,18 @@ envContent.split("\n").forEach(line => {
   }
 });
 
-const supabase = createClient(env.VITE_SUPABASE_URL, env.VITE_SUPABASE_ANON_KEY);
+// Read the function source
+const functionPath = path.join("supabase", "functions", "member_purchase_plan", "index.ts");
+const functionSource = fs.readFileSync(functionPath, "utf8");
 
-async function check() {
-  // Try inserting a test notification to see what columns are available
-  const { data, error } = await supabase.from("member_notifications").insert({
-    member_id: "6b91c7da-2097-436a-8565-9ab4aed797a6",
-    organization_id: "test-org-id",
-    title: "Test",
-    message: "Test message",
-    is_read: false,
-  }).select();
-  
-  console.log("Insert result:", data);
-  console.log("Insert error:", error);
-}
+const PROJECT_REF = "woboulyogmydoygjaaxz";
 
-check();
+// We need the Supabase access token - check if it's in env
+const accessToken = env.SUPABASE_ACCESS_TOKEN || env.SUPABASE_SERVICE_ROLE_KEY;
+
+console.log("Function source length:", functionSource.length);
+console.log("Project ref:", PROJECT_REF);
+console.log("Note: To deploy edge functions, you need to use the Supabase Dashboard or CLI.");
+console.log("\nGo to: https://supabase.com/dashboard/project/" + PROJECT_REF + "/functions");
+console.log("Click 'New function', name it 'member_purchase_plan', paste the code from:");
+console.log(path.resolve(functionPath));

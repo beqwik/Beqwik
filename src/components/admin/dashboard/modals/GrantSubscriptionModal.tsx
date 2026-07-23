@@ -1,8 +1,12 @@
+import React from "react";
+import { type GymPlan } from "../../../../services/organization/planService";
+
 interface GrantSubscriptionModalProps {
   open: boolean;
   onClose: () => void;
 
   members: any[];
+  plans?: GymPlan[];
 
   subMemberId: string;
   setSubMemberId: (value: string) => void;
@@ -28,6 +32,7 @@ export default function GrantSubscriptionModal({
   open,
   onClose,
   members,
+  plans = [],
   subMemberId,
   setSubMemberId,
   subPlanName,
@@ -43,6 +48,15 @@ export default function GrantSubscriptionModal({
 }: GrantSubscriptionModalProps) {
   if (!open) return null;
 
+  const handleSelectPreset = (planId: string) => {
+    const selected = plans.find((p) => p.id === planId);
+    if (selected) {
+      setSubPlanName(selected.name);
+      setSubAmount(selected.price.toString());
+      setSubDurationMonths(selected.duration_months.toString());
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 flex items-center justify-center p-4">
       <div className="bg-white rounded-3xl w-full max-w-md p-8 relative shadow-2xl animate-scaleUp">
@@ -56,7 +70,7 @@ export default function GrantSubscriptionModal({
           Grant Membership Plan
         </h3>
         <p className="text-slate-500 text-sm mb-6">
-          Create a new active subscription plan details for an organization member.
+          Assign a plan package or subscription tier to a member.
         </p>
 
         <form onSubmit={handleAddSubscription} className="space-y-4">
@@ -73,11 +87,32 @@ export default function GrantSubscriptionModal({
               <option value="">-- Choose Member --</option>
               {members.map((m) => (
                 <option key={m.id} value={m.id}>
-                  {m.full_name} ({m.email})
+                  {m.full_name} ({m.email || m.phone || "No Contact"})
                 </option>
               ))}
             </select>
           </div>
+
+          {/* PREDEFINED PLAN SELECTOR */}
+          {plans.length > 0 && (
+            <div>
+              <label className="block text-xs font-semibold text-indigo-600 mb-1">
+                Choose Predefined Plan Tier (Optional)
+              </label>
+              <select
+                onChange={(e) => handleSelectPreset(e.target.value)}
+                defaultValue=""
+                className="w-full px-4 py-3 rounded-xl border border-indigo-200 bg-indigo-50/50 text-sm font-semibold text-indigo-900 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              >
+                <option value="">-- Custom Plan / Select Preset --</option>
+                {plans.filter(p => p.is_active).map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name} — ₹{p.price} ({p.duration_months} Month{p.duration_months > 1 ? "s" : ""})
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1">
@@ -96,7 +131,7 @@ export default function GrantSubscriptionModal({
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Amount Paid (₹)
+                Amount (₹)
               </label>
               <input
                 type="number"
@@ -110,12 +145,12 @@ export default function GrantSubscriptionModal({
 
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Duration (Months)
+                Duration
               </label>
               <select
                 value={subDurationMonths}
                 onChange={(e) => setSubDurationMonths(e.target.value)}
-                className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#e05275]/40"
+                className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#e05275]/40 bg-white"
               >
                 <option value="1">1 Month</option>
                 <option value="3">3 Months</option>
@@ -127,14 +162,14 @@ export default function GrantSubscriptionModal({
 
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1">
-              Payment Setup
+              Payment Method
             </label>
             <select
               value={subPaymentMethod}
               onChange={(e) => setSubPaymentMethod(e.target.value)}
               className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#e05275]/40 bg-white"
             >
-              <option value="manual">Paid directly to Owner (Cash/Manual)</option>
+              <option value="manual">Paid directly (Cash/Manual - Mark Active)</option>
               <option value="online_pending">Requires Online Payment by Member</option>
             </select>
           </div>
