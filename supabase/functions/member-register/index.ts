@@ -24,6 +24,7 @@ serve(async (req) => {
       email,
       phone,
       password,
+      role,
     } = body;
 
     const supabase = createClient(
@@ -45,7 +46,7 @@ serve(async (req) => {
       throw new Error("Organization not found");
     }
 
-    // Check duplicate email
+    // Check duplicate email in credentials for THIS organization
     const {
       data: existingCredential,
       error: existingError,
@@ -61,44 +62,122 @@ serve(async (req) => {
     }
 
     if (existingCredential) {
-      throw new Error("Email already registered");
+      throw new Error("Email already registered in this organization");
     }
 
-    // Create member
-    const {
-      data: member,
-      error: memberError,
-    } = await supabase
+    // Check if member profile already exists globally in members table
+    let member;
+    const { data: existingMember } = await supabase
       .from("members")
-      .insert({
-        full_name: fullName,
-        email,
-        phone,
-      })
-      .select()
-      .single();
+      .select("*")
+      .eq("email", email)
+      .maybeSingle();
 
-    if (memberError) {
-      throw memberError;
+    if (existingMember) {
+      member = existingMember;
+    } else {
+      // Create new member profile
+      const {
+        data: newMember,
+        error: memberError,
+      } = await supabase
+        .from("members")
+        .insert({
+          full_name: fullName,
+          email,
+          phone,
+        })
+        .select()
+        .single();
+
+      if (memberError) {
+        throw memberError;
+      }
+      member = newMember;
     }
 
     // Hash password
     const passwordHash = await bcrypt.hash(password, 10);
 
-    // Save credentials
-    const {
-      error: credentialError,
-    } = await supabase
+    // Check existing credentials
+    const { data: existingCreds } = await supabase
       .from("member_credentials")
-      .insert({
-        organization_id: organization.id,
-        member_id: member.id,
-        email,
-        password_hash: passwordHash,
-      });
+      .select("id")
+      .eq("organization_id", organization.id)
+      .eq("member_id", member.id)
+      .maybeSingle();
 
-    if (credentialError) {
-      throw credentialError;
+    if (existingCreds) {
+      const { error: credentialError } = await supabase
+        .from("member_credentials")
+        .update({ email, password_hash: passwordHash })
+        .eq("id", existingCreds.id);
+      if (credentialError) throw credentialError;
+    } else {
+      const { error: credentialError } = await supabase
+        .from("member_credentials")
+        .insert({
+          organization_id: organization.id,
+          member_id: member.id,
+          email,
+          password_hash: passwordHash,
+        });
+      if (credentialError) throw credentialError;
+    }
+
+    // Check existing organization_members
+    const { data: existingOrgMember } = await supabase
+      .from("organization_members")
+      .select("id")
+      .eq("organization_id", organization.id)
+      .eq("member_id", member.id)
+      .maybeSingle();
+
+    if (existingOrgMember) {
+      await supabase
+        .from("organization_members")
+        .update({ active: true, role: role || "student" })
+        .eq("id", existingOrgMember.id);
+    } else {
+      await supabase
+        .from("organization_members")
+        .insert({
+          organization_id: organization.id,
+          member_id: member.id,
+          active: true,
+          role: role || "student",
+        });
+    }
+
+    // Sync to students or staff table globally to ensure dashboard picks it up
+    if (role === "staff" || role === "teacher") {
+      const { error: staffError } = await supabase.from("staff").upsert(
+        {
+          organization_id: organization.id,
+          full_name: fullName,
+          email,
+          phone,
+          role: "staff",
+          designation: "Teacher",
+          active: true,
+        },
+        { onConflict: "email" }
+      );
+      if (staffError) throw new Error("Staff sync error: " + staffError.message);
+    } else {
+      const studentCode = `STU-${Math.floor(100000 + Math.random() * 900000)}`;
+      const { error: studentError } = await supabase.from("students").upsert(
+        {
+          organization_id: organization.id,
+          student_code: studentCode,
+          full_name: fullName,
+          email,
+          phone,
+          role: "student",
+        },
+        { onConflict: "email" }
+      );
+      if (studentError) throw new Error("Student sync error: " + studentError.message);
     }
 
     return new Response(
@@ -123,7 +202,7 @@ serve(async (req) => {
         details: error,
       }),
       {
-        status: 400,
+        status: 200,
         headers: {
           ...corsHeaders,
           "Content-Type": "application/json",

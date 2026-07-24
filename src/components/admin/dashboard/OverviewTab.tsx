@@ -57,6 +57,14 @@ export default function OverviewTab({
           <h2 className="text-3xl font-black text-slate-800 mt-1">
             {members.length}
           </h2>
+          <div className="mt-3 flex gap-4 text-xs font-semibold">
+            <div className="flex items-center gap-1 text-[#e05275]">
+              <span>🎓</span> {members.filter(m => m.role === 'student' || !m.role).length} Students
+            </div>
+            <div className="flex items-center gap-1 text-purple-700">
+              <span>💼</span> {members.filter(m => m.role === 'staff').length} Staff
+            </div>
+          </div>
           <div className="w-full bg-[#ffe8e0] h-1.5 rounded-full mt-3 overflow-hidden">
             <div
               className="bg-[#e05275] h-full rounded-full transition-all duration-500"
@@ -80,7 +88,7 @@ export default function OverviewTab({
             {activeSubs.length}
           </h2>
           <p className="text-xs text-slate-400 mt-3 font-medium">
-            {members.length - activeSubs.length} members with no plan
+            {members.filter(m => m.role === 'student' || !m.role).length - activeSubs.length} students with no plan
           </p>
         </div>
 

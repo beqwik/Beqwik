@@ -71,7 +71,7 @@ export default function GrantSubscriptionModal({
               className="w-full px-4 py-3 rounded-xl border border-slate-250 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
             >
               <option value="">-- Choose Member --</option>
-              {members.map((m) => (
+              {members.filter(m => m.role === 'student' || !m.role).map((m) => (
                 <option key={m.id} value={m.id}>
                   {m.full_name} ({m.email})
                 </option>
