@@ -8,16 +8,16 @@ export async function getMemberSubscriptions(
 ) {
   const { data, error } = await supabase
     .from("subscriptions")
-    .select(`
-      *,
-      subscription_plans(*)
-    `)
+    .select("*")
     .eq("member_id", memberId)
     .order("created_at", { ascending: false });
 
-  if (error) throw error;
+  if (error) {
+    console.warn("getMemberSubscriptions error:", error.message);
+    return [];
+  }
 
-  return data;
+  return data || [];
 }
 
 // =====================================
@@ -28,13 +28,10 @@ export async function getActiveSubscription(
 ) {
   const { data, error } = await supabase
     .from("subscriptions")
-    .select(`
-      *,
-      subscription_plans(*)
-    `)
+    .select("*")
     .eq("member_id", memberId)
     .eq("status", "active")
-    .single();
+    .maybeSingle();
 
   if (error) return null;
 

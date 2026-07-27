@@ -60,6 +60,7 @@ import {
   type StudyMaterialItem,
   type AnnouncementItem
 } from "../../services/organization/academyService";
+import { getGymPlans } from "../../services/organization/planService";
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
@@ -76,6 +77,15 @@ export default function AdminDashboard() {
     notifications: recentNotifications,
     reloadDashboard,
   } = useDashboard();
+
+  // Predefined gym plans state
+  const [gymPlans, setGymPlans] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (organization?.id) {
+      getGymPlans(organization.id).then(setGymPlans).catch(console.error);
+    }
+  }, [organization?.id]);
 
   // Modal / Form states
   const [showAddMember, setShowAddMember] = useState(false);
@@ -674,6 +684,7 @@ export default function AdminDashboard() {
         open={showAddSub}
         onClose={() => setShowAddSub(false)}
         members={members}
+        plans={gymPlans}
         subMemberId={subMemberId}
         setSubMemberId={setSubMemberId}
         subPlanName={subPlanName}
