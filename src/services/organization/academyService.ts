@@ -554,9 +554,242 @@ export async function getStudyMaterials(_organizationId: string): Promise<StudyM
   ];
 }
 
-export async function getAnnouncementsList(_organizationId: string): Promise<AnnouncementItem[]> {
-  return [
-    { id: "anc-1", title: "Mid-Term Examination Schedule Released", content: "The mid-term examination timetable for all grades has been published. Please check the Tests tab for dates.", target_audience: "All", created_at: "2 hours ago", author: "Principal Office", priority: "urgent" },
+// LocalStorage helpers for academic announcements
+function getLocalAnnouncements(organizationId: string): AnnouncementItem[] {
+  try {
+    const raw = localStorage.getItem(`academic_announcements_${organizationId}`);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveLocalAnnouncements(organizationId: string, items: AnnouncementItem[]) {
+  try {
+    localStorage.setItem(`academic_announcements_${organizationId}`, JSON.stringify(items));
+  } catch (err) {
+    console.error("Error saving local announcements:", err);
+  }
+}
+
+export async function getAnnouncementsList(organizationId: string): Promise<AnnouncementItem[]> {
+  const localItems = getLocalAnnouncements(organizationId);
+
+  try {
+    const { data, error } = await supabase
+      .from("academic_announcements")
+      .select("*")
+      .eq("organization_id", organizationId)
+      .order("created_at", { ascending: false });
+
+    if (!error && data && data.length > 0) {
+      const dbItems: AnnouncementItem[] = data.map((row: any) => ({
+        id: row.id,
+        title: row.title,
+        content: row.content,
+        target_audience: row.target_audience || "All",
+        priority: row.priority || "normal",
+        author: row.author || "Admin",
+        created_at: new Date(row.created_at).toLocaleDateString("en-IN", {
+          day: "numeric",
+          month: "short",
+          year: "numeric"
+        })
+      }));
+
+      // Combine DB items + local items (deduplicated by id)
+      const map = new Map<string, AnnouncementItem>();
+      dbItems.forEach(item => map.set(item.id, item));
+      localItems.forEach(item => { if (!map.has(item.id)) map.set(item.id, item); });
+
+      const result = Array.from(map.values());
+      saveLocalAnnouncements(organizationId, result);
+      return result;
+    }
+
+    if (error) {
+      console.warn("Querying academic_announcements failed or table not found:", error);
+    }
+  } catch (err) {
+    console.error("Supabase academic_announcements error:", err);
+  }
+
+  // If local items exist, return them
+  if (localItems.length > 0) {
+    return localItems;
+  }
+
+  // Auto-seed initial demo announcements to database & local storage if empty
+  const defaultAnnouncements = [
+    {
+      organization_id: organizationId,
+      title: "Mid-Term Examination Schedule Released",
+      content: "The mid-term examination timetable for all grades has been published. Please check the Tests tab for dates.",
+      target_audience: "All",
+      priority: "urgent",
+      author: "Principal Office"
+    },
+    {
+      organization_id: organizationId,
+      title: "Faculty Meeting this Friday at 4 PM",
+      content: "All department heads and teaching staff are requested to attend the monthly academic review meeting.",
+      target_audience: "Teachers",
+      priority: "high",
+      author: "Dean of Academics"
+    }
+  ];
+
+  try {
+    const { data: seeded } = await supabase
+      .from("academic_announcements")
+      .insert(defaultAnnouncements)
+      .select();
+
+    if (seeded && seeded.length > 0) {
+      const result: AnnouncementItem[] = seeded.map((row: any) => ({
+        id: row.id,
+        title: row.title,
+        content: row.content,
+        target_audience: row.target_audience || "All",
+        priority: row.priority || "normal",
+        author: row.author || "Admin",
+        created_at: new Date(row.created_at).toLocaleDateString("en-IN", {
+          day: "numeric",
+          month: "short",
+          year: "numeric"
+        })
+      }));
+      saveLocalAnnouncements(organizationId, result);
+      return result;
+    }
+  } catch (e) {
+    console.error(e);
+  }
+
+  const fallback: AnnouncementItem[] = [
+    { id: "anc-1", title: "Mid-Term Examination Schedule Released", content: "The mid-term examination timetable for all grades has been published. Please check the Tests tab for dates.", target_audience: "All", created_at: "Just now", author: "Principal Office", priority: "urgent" },
     { id: "anc-2", title: "Faculty Meeting this Friday at 4 PM", content: "All department heads and teaching staff are requested to attend the monthly academic review meeting.", target_audience: "Teachers", created_at: "1 day ago", author: "Dean of Academics", priority: "high" }
   ];
+  saveLocalAnnouncements(organizationId, fallback);
+  return fallback;
+}
+
+export async function createAnnouncement(
+  organizationId: string,
+  anc: {
+    title: string;
+    content: string;
+    target_audience?: "All" | "Students" | "Teachers";
+    priority?: "normal" | "high" | "urgent";
+    author?: string;
+  }
+): Promise<AnnouncementItem> {
+  const payload = {
+    organization_id: organizationId,
+    title: anc.title,
+    content: anc.content,
+    target_audience: anc.target_audience || "All",
+    priority: anc.priority || "normal",
+    author: anc.author || "Admin"
+  };
+
+  let newAnc: AnnouncementItem | null = null;
+
+  try {
+    const { data, error } = await supabase
+      .from("academic_announcements")
+      .insert(payload)
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Error inserting into academic_announcements table:", error);
+    }
+
+    if (data) {
+      newAnc = {
+        id: data.id,
+        title: data.title,
+        content: data.content,
+        target_audience: data.target_audience || "All",
+        priority: data.priority || "normal",
+        author: data.author || "Admin",
+        created_at: new Date(data.created_at).toLocaleDateString("en-IN", {
+          day: "numeric",
+          month: "short",
+          year: "numeric"
+        })
+      };
+    }
+  } catch (err) {
+    console.error("Failed to insert into academic_announcements:", err);
+  }
+
+  if (!newAnc) {
+    newAnc = {
+      id: `anc-${Date.now()}`,
+      title: anc.title,
+      content: anc.content,
+      target_audience: anc.target_audience || "All",
+      priority: anc.priority || "normal",
+      author: anc.author || "Admin",
+      created_at: "Just now"
+    };
+  }
+
+  // 1. Save to local storage for instant persistence across page refreshes
+  const existing = getLocalAnnouncements(organizationId);
+  const updated = [newAnc, ...existing.filter((item) => item.id !== newAnc!.id)];
+  saveLocalAnnouncements(organizationId, updated);
+
+  // 2. Dispatch to student member_notifications in Supabase
+  try {
+    const { data: students } = await supabase
+      .from("students")
+      .select("id")
+      .eq("organization_id", organizationId);
+
+    const { data: members } = await supabase
+      .from("members")
+      .select("id")
+      .eq("organization_id", organizationId);
+
+    const memberIds = new Set<string>();
+    (students || []).forEach((s: any) => memberIds.add(s.id));
+    (members || []).forEach((m: any) => memberIds.add(m.id));
+
+    if (memberIds.size > 0) {
+      const notifPayloads = Array.from(memberIds).map((mid) => ({
+        organization_id: organizationId,
+        member_id: mid,
+        title: `Academic Notice: ${anc.title}`,
+        message: anc.content,
+        type: anc.priority === "urgent" ? "warning" : "info",
+        is_read: false
+      }));
+
+      await supabase.from("member_notifications").insert(notifPayloads);
+    }
+  } catch (err) {
+    console.error("Failed to dispatch student member_notifications:", err);
+  }
+
+  return newAnc;
+}
+
+export async function deleteAnnouncement(announcementId: string, organizationId?: string): Promise<void> {
+  try {
+    await supabase
+      .from("academic_announcements")
+      .delete()
+      .eq("id", announcementId);
+  } catch (err) {
+    console.error("Error deleting academic_announcement from database:", err);
+  }
+
+  if (organizationId) {
+    const existing = getLocalAnnouncements(organizationId);
+    const updated = existing.filter((item) => item.id !== announcementId);
+    saveLocalAnnouncements(organizationId, updated);
+  }
 }

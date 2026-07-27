@@ -51,7 +51,7 @@ export default function MemberNotifications() {
 
   const handleMarkRead = async (id: string) => {
     try {
-      await markNotificationRead(id);
+      await markNotificationRead(id, member?.id);
       setNotifications((prev) =>
         prev.map((n) => (n.id === id ? { ...n, is_read: true } : n))
       );

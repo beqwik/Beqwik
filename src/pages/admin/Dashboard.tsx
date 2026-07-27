@@ -49,6 +49,8 @@ import {
   getAssignmentsList,
   getStudyMaterials,
   getAnnouncementsList,
+  createAnnouncement,
+  deleteAnnouncement,
   type AcademyClass,
   type Student,
   type StaffMember,
@@ -528,15 +530,14 @@ export default function AdminDashboard() {
           {activeTab === "announcements" && (
             <AnnouncementsModule
               announcements={announcements}
-              onCreateAnnouncement={(anc) => {
-                const newAnc: AnnouncementItem = {
-                  id: `anc-${Date.now()}`,
-                  ...anc,
-                  created_at: "Just now",
-                  author: "Admin"
-                };
-                setAnnouncements(prev => [newAnc, ...prev]);
-                alert("Announcement created successfully!");
+              onCreateAnnouncement={async (ancData) => {
+                if (!organization?.id) return;
+                const created = await createAnnouncement(organization.id, ancData);
+                setAnnouncements((prev) => [created, ...prev]);
+              }}
+              onDeleteAnnouncement={async (ancId) => {
+                await deleteAnnouncement(ancId, organization?.id);
+                setAnnouncements((prev) => prev.filter((a) => a.id !== ancId));
               }}
             />
           )}
