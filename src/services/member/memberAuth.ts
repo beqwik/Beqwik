@@ -6,6 +6,7 @@ interface RegisterMemberData {
   email: string;
   phone: string;
   password: string;
+  role?: string;
 }
 
 interface LoginMemberData {

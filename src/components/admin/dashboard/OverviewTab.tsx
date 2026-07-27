@@ -1,15 +1,15 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { 
-  Users, 
-  CreditCard, 
-  IndianRupee, 
-  Calendar, 
-  UserPlus, 
-  Dumbbell, 
-  UserCheck, 
-  Bell, 
-  Plus, 
+import {
+  Users,
+  CreditCard,
+  IndianRupee,
+  Calendar,
+  UserPlus,
+  Dumbbell,
+  UserCheck,
+  Bell,
+  Plus,
   ArrowUpRight,
   ChevronRight,
   Activity
@@ -166,19 +166,15 @@ export default function OverviewTab({
               <ArrowUpRight className="w-3.5 h-3.5" /> Active: {activeMembersCount}
             </span>
           </div>
-          <p className="text-slate-500 text-xs font-bold uppercase tracking-wider mt-4">Total Members</p>
-          <h2 className="text-3xl font-black text-slate-900 mt-1">{members.length}</h2>
-          <div className="mt-3">
-            <div className="flex justify-between text-[11px] font-semibold text-slate-500 mb-1">
-              <span>Capacity</span>
-              <span>{members.length} / {maxMembers}</span>
-            </div>
-            <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
-              <div
-                className="bg-blue-600 h-full rounded-full transition-all duration-500"
-                style={{ width: `${Math.min(100, (members.length / maxMembers) * 100)}%` }}
-              />
-            </div>
+          <p className="text-slate-500 text-sm font-semibold">Total Members</p>
+          <h2 className="text-3xl font-black text-slate-800 mt-1">
+            {members.length}
+          </h2>
+          <div className="w-full bg-[#ffe8e0] h-1.5 rounded-full mt-3 overflow-hidden">
+            <div
+              className="bg-[#e05275] h-full rounded-full transition-all duration-500"
+              style={{ width: `${Math.min(100, (members.length / maxMembers) * 100)}%` }}
+            />
           </div>
         </div>
 
@@ -192,10 +188,14 @@ export default function OverviewTab({
               {members.length > 0 ? `${Math.round((activeSubs.length / members.length) * 100)}%` : "0%"}
             </span>
           </div>
-          <p className="text-slate-500 text-xs font-bold uppercase tracking-wider mt-4">Active Subscriptions</p>
-          <h2 className="text-3xl font-black text-slate-900 mt-1">{activeSubs.length}</h2>
-          <p className="text-xs text-slate-400 font-medium mt-3">
-            {members.length - activeSubs.length} member{members.length - activeSubs.length !== 1 ? "s" : ""} without active plan
+          <p className="text-slate-500 text-sm font-semibold">
+            Active Subscriptions
+          </p>
+          <h2 className="text-3xl font-black text-slate-800 mt-1">
+            {activeSubs.length}
+          </h2>
+          <p className="text-xs text-slate-400 mt-3 font-medium">
+            {members.length - activeSubs.length} members with no plan
           </p>
         </div>
 
@@ -447,9 +447,8 @@ export default function OverviewTab({
                     </div>
                   </div>
 
-                  <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider flex-shrink-0 ${
-                    member.active !== false ? "bg-emerald-50 text-emerald-600" : "bg-slate-100 text-slate-400"
-                  }`}>
+                  <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider flex-shrink-0 ${member.active !== false ? "bg-emerald-50 text-emerald-600" : "bg-slate-100 text-slate-400"
+                    }`}>
                     {member.active !== false ? "Active" : "Inactive"}
                   </span>
                 </div>

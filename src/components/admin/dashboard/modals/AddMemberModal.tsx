@@ -14,6 +14,9 @@ interface AddMemberModalProps {
   newMemberPassword: string;
   setNewMemberPassword: (value: string) => void;
 
+  newMemberRole?: "student" | "staff";
+  setNewMemberRole?: (value: "student" | "staff") => void;
+
   addingMember: boolean;
 
   handleAddMember: (e: React.FormEvent<HTMLFormElement>) => void;
@@ -30,6 +33,8 @@ export default function AddMemberModal({
   setNewMemberPhone,
   newMemberPassword,
   setNewMemberPassword,
+  newMemberRole = "student",
+  setNewMemberRole,
   addingMember,
   handleAddMember,
 }: AddMemberModalProps) {
@@ -48,10 +53,43 @@ export default function AddMemberModal({
           Register Member
         </h3>
         <p className="text-slate-500 text-sm mb-6">
-          Create credentials & profile for a new member inside this organization.
+          Create credentials & profile as a Student or Staff member.
         </p>
 
         <form onSubmit={handleAddMember} className="space-y-4">
+          {/* MEMBER TYPE / ROLE SELECTION */}
+          {setNewMemberRole && (
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                Register Member As
+              </label>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setNewMemberRole("student")}
+                  className={`py-2.5 px-4 rounded-xl border text-sm font-semibold flex items-center justify-center gap-2 transition ${
+                    newMemberRole === "student"
+                      ? "border-[#e05275] bg-[#fff0f5] text-[#e05275] shadow-sm"
+                      : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+                  }`}
+                >
+                  🎓 Student
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setNewMemberRole("staff")}
+                  className={`py-2.5 px-4 rounded-xl border text-sm font-semibold flex items-center justify-center gap-2 transition ${
+                    newMemberRole === "staff"
+                      ? "border-purple-600 bg-purple-50 text-purple-700 shadow-sm"
+                      : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+                  }`}
+                >
+                  💼 Staff / Teacher
+                </button>
+              </div>
+            </div>
+          )}
+
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1">
               Full Name

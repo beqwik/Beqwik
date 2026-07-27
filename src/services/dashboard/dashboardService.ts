@@ -50,18 +50,67 @@ class DashboardService {
       (m) => m.member_id
     );
 
-    const { data: members, error } =
-      await supabase
+    const [
+      membersResult,
+      studentsResult,
+      staffResult,
+    ] = await Promise.all([
+      supabase
         .from("members")
         .select("*")
         .in("id", memberIds)
         .order("created_at", {
           ascending: false,
-        });
+        }),
+      supabase
+        .from("students")
+        .select("*")
+        .eq("organization_id", organizationId)
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("staff")
+        .select("*")
+        .eq("organization_id", organizationId)
+        .order("created_at", { ascending: false })
+    ]);
 
-    if (error) throw error;
+    if (membersResult.error) throw membersResult.error;
 
-    return members ?? [];
+    const studentsData = studentsResult.data || [];
+    const staffData = staffResult.data || [];
+    const actualMembers = membersResult.data || [];
+
+    const emailToMember = new Map(actualMembers.map((m: any) => [m.email?.toLowerCase(), m]));
+
+    const mappedStaff = staffData.map((staff: any) => {
+      const memberRef = emailToMember.get(staff.email?.toLowerCase());
+      return {
+        ...memberRef,
+        ...staff,
+        id: memberRef?.id || staff.id,
+        role: "staff",
+        is_staff: true
+      };
+    });
+
+    const mappedStudents = studentsData.map((student: any) => {
+      const memberRef = emailToMember.get(student.email?.toLowerCase());
+      return {
+        ...memberRef,
+        ...student,
+        id: memberRef?.id || student.id,
+        role: "student",
+        is_student: true
+      };
+    });
+
+    const staffEmailsSet = new Set(mappedStaff.map(s => s.email?.toLowerCase()));
+    const uniqueStudents = mappedStudents.filter(s => !staffEmailsSet.has(s.email?.toLowerCase()));
+
+    const members = [...mappedStaff, ...uniqueStudents];
+    members.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+    return members;
   }
 
   /**
