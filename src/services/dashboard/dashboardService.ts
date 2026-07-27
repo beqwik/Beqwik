@@ -33,55 +33,75 @@ class DashboardService {
   /**
    * Fetch members belonging to organization
    */
+  /**
+   * Fetch members belonging to organization
+   */
   async getMembers(organizationId: string) {
-    const {
-      data: credentials,
-      error: credError,
-    } = await supabase
+    // 1. Collect member IDs from member_credentials linked to this organization
+    const { data: credentials } = await supabase
       .from("member_credentials")
       .select("member_id")
       .eq("organization_id", organizationId);
 
-    if (credError) throw credError;
+    // 2. Collect member IDs from organization_members linked to this organization
+    const { data: orgMembers } = await supabase
+      .from("organization_members")
+      .select("member_id")
+      .eq("organization_id", organizationId);
 
-    if (!credentials?.length) return [];
+    const credIds = credentials?.map((m) => m.member_id).filter(Boolean) || [];
+    const orgIds = orgMembers?.map((m) => m.member_id).filter(Boolean) || [];
+    const combinedMemberIds = Array.from(new Set([...credIds, ...orgIds]));
 
-    const memberIds = credentials.map(
-      (m) => m.member_id
-    );
-
+    // 3. Execute parallel queries for members, students, staff, and direct org members
     const [
       membersResult,
+      directMembersResult,
       studentsResult,
       staffResult,
     ] = await Promise.all([
+      combinedMemberIds.length > 0
+        ? supabase
+            .from("members")
+            .select("*")
+            .in("id", combinedMemberIds)
+            .order("created_at", { ascending: false })
+        : Promise.resolve({ data: [], error: null }),
+
       supabase
         .from("members")
         .select("*")
-        .in("id", memberIds)
-        .order("created_at", {
-          ascending: false,
-        }),
+        .eq("organization_id", organizationId)
+        .order("created_at", { ascending: false }),
+
       supabase
         .from("students")
         .select("*")
         .eq("organization_id", organizationId)
         .order("created_at", { ascending: false }),
+
       supabase
         .from("staff")
         .select("*")
         .eq("organization_id", organizationId)
-        .order("created_at", { ascending: false })
+        .order("created_at", { ascending: false }),
     ]);
 
-    if (membersResult.error) throw membersResult.error;
-
+    const fetchedMembers = membersResult.data || [];
+    const directMembers = directMembersResult.data || [];
     const studentsData = studentsResult.data || [];
     const staffData = staffResult.data || [];
-    const actualMembers = membersResult.data || [];
 
-    const emailToMember = new Map(actualMembers.map((m: any) => [m.email?.toLowerCase(), m]));
+    // Combine all member profile records
+    const allMembersMap = new Map<string, any>();
+    const emailToMember = new Map<string, any>();
 
+    for (const m of [...fetchedMembers, ...directMembers]) {
+      if (m.id) allMembersMap.set(m.id, m);
+      if (m.email) emailToMember.set(m.email.toLowerCase(), m);
+    }
+
+    // Process staff
     const mappedStaff = staffData.map((staff: any) => {
       const memberRef = emailToMember.get(staff.email?.toLowerCase());
       return {
@@ -89,10 +109,12 @@ class DashboardService {
         ...staff,
         id: memberRef?.id || staff.id,
         role: "staff",
-        is_staff: true
+        is_staff: true,
+        active: staff.active !== undefined ? staff.active : true,
       };
     });
 
+    // Process students
     const mappedStudents = studentsData.map((student: any) => {
       const memberRef = emailToMember.get(student.email?.toLowerCase());
       return {
@@ -100,15 +122,39 @@ class DashboardService {
         ...student,
         id: memberRef?.id || student.id,
         role: "student",
-        is_student: true
+        is_student: true,
+        active: student.active !== undefined ? student.active : true,
       };
     });
 
-    const staffEmailsSet = new Set(mappedStaff.map(s => s.email?.toLowerCase()));
-    const uniqueStudents = mappedStudents.filter(s => !staffEmailsSet.has(s.email?.toLowerCase()));
+    // Collect emails that are already accounted for in staff/students
+    const processedEmails = new Set([
+      ...mappedStaff.map((s) => s.email?.toLowerCase()).filter(Boolean),
+      ...mappedStudents.map((s) => s.email?.toLowerCase()).filter(Boolean),
+    ]);
 
-    const members = [...mappedStaff, ...uniqueStudents];
-    members.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    // Include members from `members` table that weren't in staff or students
+    const remainingMembers = Array.from(allMembersMap.values())
+      .filter((m) => !processedEmails.has(m.email?.toLowerCase()))
+      .map((m) => ({
+        ...m,
+        role: m.role || "student",
+        active: m.active !== undefined ? m.active : true,
+      }));
+
+    const finalMembersList = [...mappedStaff, ...mappedStudents, ...remainingMembers];
+
+    // Deduplicate by ID / email to guarantee a clean list
+    const uniqueMembersMap = new Map<string, any>();
+    for (const m of finalMembersList) {
+      const key = m.id || m.email?.toLowerCase();
+      if (key && !uniqueMembersMap.has(key)) {
+        uniqueMembersMap.set(key, m);
+      }
+    }
+
+    const members = Array.from(uniqueMembersMap.values());
+    members.sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
 
     return members;
   }
