@@ -17,6 +17,7 @@ const getNavItemsForType = (type: string) => {
       { tab: "equipment", icon: "🛠️", label: "Equipment" },
       { tab: "subscriptions", icon: "💳", label: "Memberships" },
       { tab: "notifications", icon: "🔔", label: "Send Alerts" },
+      { tab: "announcements", icon: "📢", label: "Announcements" },
       { tab: "settings", icon: "⚙️", label: "Settings" },
     ];
   }

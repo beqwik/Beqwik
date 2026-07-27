@@ -7,6 +7,7 @@ import { useDashboard } from "../../hooks/useDashboard";
 import GymSection from "../../components/admin/sections/GymSection";
 import HostelMessSection from "../../components/admin/sections/HostelMessSection";
 import AcademySection from "../../components/admin/sections/AcademySection";
+import GymAnnouncementsSection from "../../components/admin/sections/GymAnnouncementsSection";
 import OverviewTab from "../../components/admin/dashboard/OverviewTab";
 import MembersTab from "../../components/admin/dashboard/MembersTab";
 import SubscriptionTab from "../../components/admin/dashboard/SubscriptionTab";
@@ -644,7 +645,13 @@ export default function AdminDashboard() {
             />
           )}
 
-          {type === "Gym" && (
+          {type === "Gym" && activeTab === "announcements" && (
+            <GymAnnouncementsSection
+              organizationId={organization?.id || ""}
+            />
+          )}
+
+          {type === "Gym" && activeTab !== "announcements" && (
             <GymSection
               activeTab={activeTab}
               organizationId={organization?.id || ""}

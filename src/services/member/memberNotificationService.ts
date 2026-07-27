@@ -114,6 +114,41 @@ export async function getNotifications(memberId: string) {
     }
   }
 
+  // 3b. Fetch Gym Announcements from Supabase (gym members see these in notification feed)
+  if (orgId) {
+    try {
+      const { data: gymAncs } = await supabase
+        .from("gym_announcements")
+        .select("*")
+        .eq("organization_id", orgId)
+        .order("created_at", { ascending: false });
+
+      if (gymAncs && gymAncs.length > 0) {
+        gymAncs.forEach((anc: any) => {
+          if (!addedIds.has(anc.id)) {
+            addedIds.add(anc.id);
+            resultNotifs.push({
+              id: anc.id,
+              member_id: memberId,
+              title: `📢 ${anc.title}`,
+              message: anc.message,
+              type:
+                anc.priority === "urgent"
+                  ? "warning"
+                  : anc.priority === "high"
+                  ? "reminder"
+                  : "info",
+              is_read: readSet.has(anc.id),
+              created_at: anc.created_at
+            });
+          }
+        });
+      }
+    } catch (err) {
+      console.error("Error fetching gym_announcements for member:", err);
+    }
+  }
+
   // 4. Scan localStorage for any academic_announcements keys (instant fallback)
   try {
     for (let i = 0; i < localStorage.length; i++) {

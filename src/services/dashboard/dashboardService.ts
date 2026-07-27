@@ -62,10 +62,10 @@ class DashboardService {
     ] = await Promise.all([
       combinedMemberIds.length > 0
         ? supabase
-            .from("members")
-            .select("*")
-            .in("id", combinedMemberIds)
-            .order("created_at", { ascending: false })
+          .from("members")
+          .select("*")
+          .in("id", combinedMemberIds)
+          .order("created_at", { ascending: false })
         : Promise.resolve({ data: [], error: null }),
 
       supabase
