@@ -659,18 +659,10 @@ export default function MemberDashboard() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch">
-<<<<<<< HEAD
-=======
           {/* DAILY FITNESS GOALS CARD */}
->>>>>>> d284aed9241a33fa710f00a223106e0588900f7b
           <div className="bg-white rounded-[2rem] border border-slate-150 p-6 shadow-[0_10px_30px_rgba(0,0,0,0.015)] flex flex-col justify-between relative overflow-hidden">
             <div className="absolute top-0 right-0 -mr-6 -mt-6 w-28 h-28 bg-emerald-50 rounded-full -z-0 opacity-60" />
 
-<<<<<<< HEAD
-              <div className="my-6 flex flex-col items-center justify-center p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                <QrCode className="w-32 h-32 text-slate-800" />
-                <span className="text-[10px] font-mono text-slate-400 mt-2">MEMBER-{member?.id?.slice(0, 8).toUpperCase() || "ID"}</span>
-=======
             <div className="relative z-10">
               <div className="flex items-center justify-between">
                 <div>
@@ -799,7 +791,6 @@ export default function MemberDashboard() {
                     {dailyGoals.plank && <CheckCircle2 className="w-4 h-4 text-white" />}
                   </div>
                 </button>
->>>>>>> d284aed9241a33fa710f00a223106e0588900f7b
               </div>
             </div>
           </div>
@@ -836,8 +827,6 @@ export default function MemberDashboard() {
             </div>
           )}
         </div>
-<<<<<<< HEAD
-=======
 
         {/* Slot Booking Section */}
         <div className="bg-white rounded-[2rem] border border-slate-150 shadow-[0_10px_30px_rgba(0,0,0,0.015)] overflow-hidden">
