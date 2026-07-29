@@ -189,24 +189,7 @@ export async function getNotifications(memberId: string) {
   // Sort all notifications by created_at date descending
   resultNotifs.sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
 
-  if (resultNotifs.length > 0) {
-    return resultNotifs;
-  }
-
-  // Persistent fallback demo notification if 0 entries
-  const fallback = [
-    {
-      id: "notif-demo-1",
-      member_id: memberId,
-      title: "Academic Announcement: Mid-Term Examination Schedule",
-      message: "The mid-term examination timetable for all grades has been published. Please check your course dashboard.",
-      type: "info",
-      is_read: readSet.has("notif-demo-1"),
-      created_at: new Date(Date.now() - 3600000).toISOString()
-    }
-  ];
-
-  return fallback;
+  return resultNotifs;
 }
 
 // =====================================

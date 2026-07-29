@@ -1,5 +1,7 @@
+import { useState } from "react";
 import { Award, Plus, Clock, FileText } from "lucide-react";
 import type { TestEngineExam } from "../../../../services/organization/academyService";
+import CreateTestModal from "./modals/CreateTestModal";
 
 interface TestsModuleProps {
   tests: TestEngineExam[];
@@ -7,6 +9,8 @@ interface TestsModuleProps {
 }
 
 export default function TestsModule({ tests, onCreateTest }: TestsModuleProps) {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -15,23 +19,8 @@ export default function TestsModule({ tests, onCreateTest }: TestsModuleProps) {
           <p className="text-slate-500 text-xs font-medium mt-0.5">Create, schedule, and conduct live exams</p>
         </div>
         <button
-          onClick={() => {
-            const title = prompt("Enter Test/Exam Title:");
-            if (title) {
-              onCreateTest({
-                title,
-                subject: "Mathematics",
-                class_name: "Class 10 - A",
-                duration_minutes: 60,
-                total_marks: 100,
-                passing_marks: 40,
-                status: "scheduled",
-                start_time: "Tomorrow 10:00 AM",
-                questions_count: 20
-              });
-            }
-          }}
-          className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-[14px] text-xs font-bold transition flex items-center gap-2 shadow-sm"
+          onClick={() => setIsModalOpen(true)}
+          className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-[14px] text-xs font-bold transition flex items-center gap-2 shadow-sm cursor-pointer"
         >
           <Plus className="w-4 h-4" /> Create Test
         </button>
@@ -64,12 +53,19 @@ export default function TestsModule({ tests, onCreateTest }: TestsModuleProps) {
               </span>
             </div>
 
-            <button className="w-full py-2 bg-slate-50 hover:bg-indigo-50 text-indigo-700 font-extrabold text-xs rounded-[14px] border border-slate-200 transition flex items-center justify-center gap-1.5">
+            <button className="w-full py-2 bg-slate-50 hover:bg-indigo-50 text-indigo-700 font-extrabold text-xs rounded-[14px] border border-slate-200 transition flex items-center justify-center gap-1.5 cursor-pointer">
               <FileText className="w-3.5 h-3.5" /> View Question Paper
             </button>
           </div>
         ))}
       </div>
+
+      {/* Modal for creating a new test */}
+      <CreateTestModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSubmit={onCreateTest}
+      />
     </div>
   );
 }

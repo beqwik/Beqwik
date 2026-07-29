@@ -39,7 +39,7 @@ export default function AuthCallback() {
             .maybeSingle();
 
           if (!orgUser?.organization_id) {
-            navigate("/create-organization", { replace: true });
+            navigate("/onboarding/create-org", { replace: true });
             return;
           }
 
@@ -52,12 +52,12 @@ export default function AuthCallback() {
             .maybeSingle();
 
           if (!sub) {
-            navigate("/select-plan", { replace: true });
+            navigate("/onboarding/select-plan", { replace: true });
             return;
           }
 
-          // Everything is set â€” go to admin dashboard
-          navigate("/admin", { replace: true });
+          // Everything is set — go to admin dashboard
+          navigate("/admin/dashboard", { replace: true });
         } catch (err) {
           console.error("Auth callback error:", err);
           navigate("/login", { replace: true });
@@ -82,7 +82,7 @@ export default function AuthCallback() {
             .maybeSingle();
 
           if (!orgUser?.organization_id) {
-            navigate("/create-organization", { replace: true });
+            navigate("/onboarding/create-org", { replace: true });
             return;
           }
 
@@ -94,11 +94,11 @@ export default function AuthCallback() {
             .maybeSingle();
 
           if (!sub) {
-            navigate("/select-plan", { replace: true });
+            navigate("/onboarding/select-plan", { replace: true });
             return;
           }
 
-          navigate("/admin", { replace: true });
+          navigate("/admin/dashboard", { replace: true });
         } catch (err) {
           console.error("Auth callback error:", err);
           navigate("/login", { replace: true });

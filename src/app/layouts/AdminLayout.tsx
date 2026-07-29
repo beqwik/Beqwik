@@ -1,22 +1,35 @@
-import { Outlet } from "react-router-dom";
-import { useEffect } from "react";
+import { Outlet, Navigate } from "react-router-dom";
 import Sidebar from "../../components/layout/Sidebar";
 import Header from "../../components/layout/Header";
+import useSubscription from "../../hooks/useSubscription";
+import useOrganization from "../../hooks/useOrganization";
 
 export default function AdminLayout() {
-  useEffect(() => {
-    console.log("ADMIN LAYOUT MOUNT");
-    return () => {
-      console.log("ADMIN LAYOUT UNMOUNT");
-    };
-  }, []);
+  const { organization, loading: orgLoading } = useOrganization();
+  const { subscription, loading: subLoading } = useSubscription();
+
+  if (orgLoading || subLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <div className="text-center">
+          <div className="w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+          <p className="text-slate-500 text-sm font-semibold">Loading workspace...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // If organization exists but user has not purchased an active subscription, redirect to purchase plan
+  if (organization && !subscription) {
+    return <Navigate to="/onboarding/select-plan" replace />;
+  }
 
   return (
     <div className="flex min-h-screen bg-[#f8fafc] text-slate-800 font-sans antialiased">
       {/* FIXED 260px SIDEBAR */}
       <Sidebar />
 
-      {/* FLUID MAIN CONTENT AREA (Starts immediately after 260px sidebar) */}
+      {/* FLUID MAIN CONTENT AREA */}
       <div className="flex-1 ml-[260px] flex flex-col min-h-screen w-[calc(100%-260px)]">
         <Header />
 

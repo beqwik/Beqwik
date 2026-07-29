@@ -1,4 +1,4 @@
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 
 import ResetPassword from "../pages/auth/ResetPassword";
 import AuthCallback from "../pages/auth/AuthCallback";
@@ -26,6 +26,8 @@ import MemberDashboard from "../pages/member/Dashboard";
 import MemberProfile from "../pages/member/Profile";
 import MemberSubscription from "../pages/member/Subscription";
 import MemberNotifications from "../pages/member/Notifications";
+import ExploreCourses from "../pages/member/ExploreCourses";
+import MyCourses from "../pages/member/MyCourses";
 
 import SuperAdminLogin from "../pages/superAdmin/SuperAdminLogin";
 import SuperAdminDashboard from "../pages/superAdmin/Dashboard";
@@ -43,81 +45,156 @@ import Communication from "../pages/superAdmin/Communication";
 
 import ProtectedRoute from "../components/auth/ProtectedRoute";
 import OrganizationGuard from "../components/auth/OrganizationGuard";
-import SubscriptionGuard from "../components/auth/SubscriptionGuard";
 
-import SuperAdminGuard from "./guards/SuperAdminGuard";
-
-function Router() {
+export default function AppRouter() {
   return (
     <Routes>
       {/* ================= PUBLIC ================= */}
 
       <Route element={<PublicLayout />}>
         <Route path="/" element={<LandingPage />} />
-
         <Route path="/login" element={<LoginPage />} />
-
         <Route path="/register" element={<RegisterPage />} />
+        <Route path="/auth/reset-password" element={<ResetPassword />} />
+        <Route path="/auth/callback" element={<AuthCallback />} />
+        <Route path="/member/login" element={<MemberLogin />} />
+        <Route path="/member/register" element={<MemberRegister />} />
+      </Route>
 
+      {/* ================= ONBOARDING ================= */}
+
+      <Route
+        element={
+          <ProtectedRoute>
+            <PublicLayout />
+          </ProtectedRoute>
+        }
+      >
         <Route
-          path="/reset-password"
-          element={<ResetPassword />}
+          path="/onboarding/create-org"
+          element={
+            <OrganizationGuard>
+              <CreateOrganization />
+            </OrganizationGuard>
+          }
         />
-
-        <Route
-          path="/auth/callback"
-          element={<AuthCallback />}
-        />
-
-        {/* ---------- CREATE ORGANIZATION ---------- */}
-
         <Route
           path="/create-organization"
           element={
-            <ProtectedRoute>
-              <OrganizationGuard>
-                <CreateOrganization />
-              </OrganizationGuard>
-            </ProtectedRoute>
+            <OrganizationGuard>
+              <CreateOrganization />
+            </OrganizationGuard>
           }
         />
 
-        {/* ---------- SELECT PLAN ---------- */}
-
+        <Route
+          path="/onboarding/select-plan"
+          element={
+            <OrganizationGuard>
+              <SelectPlan />
+            </OrganizationGuard>
+          }
+        />
         <Route
           path="/select-plan"
           element={
-            <ProtectedRoute>
-              <SubscriptionGuard>
-                <SelectPlan />
-              </SubscriptionGuard>
-            </ProtectedRoute>
+            <OrganizationGuard>
+              <SelectPlan />
+            </OrganizationGuard>
           }
-        />
-
-        {/* ---------- MEMBER ---------- */}
-
-        <Route
-          path="/member/login"
-          element={<MemberLogin />}
-        />
-
-        <Route
-          path="/member/register"
-          element={<MemberRegister />}
-        />
-
-        {/* ---------- SUPER ADMIN LOGIN ---------- */}
-
-        <Route
-          path="/super-admin/login"
-          element={<SuperAdminLogin />}
         />
       </Route>
 
-      {/* ================= MEMBER ================= */}
+      {/* ================= ADMIN ================= */}
+
+      <Route
+        element={
+          <ProtectedRoute>
+            <AdminLayout />
+          </ProtectedRoute>
+        }
+      >
+        <Route
+          path="/admin"
+          element={<Navigate to="/admin/dashboard" replace />}
+        />
+        <Route
+          path="/admin/dashboard"
+          element={<AdminDashboard />}
+        />
+      </Route>
+
+      {/* ================= ACADEMY STUDENT ================= */}
 
       <Route element={<MemberLayout />}>
+        <Route
+          path="/student"
+          element={<Navigate to="/student/dashboard" replace />}
+        />
+
+        <Route
+          path="/student/dashboard"
+          element={<MemberDashboard />}
+        />
+
+        <Route
+          path="/student/courses"
+          element={<ExploreCourses />}
+        />
+
+        <Route
+          path="/student/my-courses"
+          element={<MyCourses />}
+        />
+
+        <Route
+          path="/student/notifications"
+          element={<MemberNotifications />}
+        />
+
+        <Route
+          path="/student/profile"
+          element={<MemberProfile />}
+        />
+      </Route>
+
+      {/* ================= ACADEMY STAFF ================= */}
+
+      <Route element={<MemberLayout />}>
+        <Route
+          path="/staff"
+          element={<Navigate to="/staff/dashboard" replace />}
+        />
+
+        <Route
+          path="/staff/dashboard"
+          element={<MemberDashboard />}
+        />
+
+        <Route
+          path="/staff/courses"
+          element={<ExploreCourses />}
+        />
+
+        <Route
+          path="/staff/notifications"
+          element={<MemberNotifications />}
+        />
+
+        <Route
+          path="/staff/profile"
+          element={<MemberProfile />}
+        />
+      </Route>
+
+      {/* ================= GENERAL MEMBER / FALLBACK ================= */}
+
+      <Route element={<MemberLayout />}>
+        <Route
+          path="/member"
+          element={<Navigate to="/member/dashboard" replace />}
+        />
+
         <Route
           path="/member/dashboard"
           element={<MemberDashboard />}
@@ -137,109 +214,91 @@ function Router() {
           path="/member/notifications"
           element={<MemberNotifications />}
         />
-      </Route>
 
-      {/* ================= STUDENT ================= */}
-
-      <Route element={<StudentLayout />}>
         <Route
-          path="/student"
-          element={<Home />}
+          path="/member/courses"
+          element={<ExploreCourses />}
         />
-      </Route>
 
-      {/* ================= ADMIN ================= */}
-
-      <Route
-        element={
-          <ProtectedRoute>
-            <SubscriptionGuard>
-              <AdminLayout />
-            </SubscriptionGuard>
-          </ProtectedRoute>
-        }
-      >
         <Route
-          path="/admin"
-          element={<AdminDashboard />}
-        />
-        <Route
-          path="/admin/dashboard"
-          element={<AdminDashboard />}
+          path="/member/my-courses"
+          element={<MyCourses />}
         />
       </Route>
 
       {/* ================= SUPER ADMIN ================= */}
 
-      <Route
-        element={
-          <SuperAdminGuard>
-            <SuperAdminLayout />
-          </SuperAdminGuard>
-        }
-      >
+      <Route path="/superadmin/login" element={<SuperAdminLogin />} />
+
+      <Route element={<SuperAdminLayout />}>
         <Route
-          path="/super-admin/dashboard"
+          path="/superadmin"
+          element={<Navigate to="/superadmin/dashboard" replace />}
+        />
+
+        <Route
+          path="/superadmin/dashboard"
           element={<SuperAdminDashboard />}
         />
 
         <Route
-          path="/super-admin/organizations"
+          path="/superadmin/organizations"
           element={<Organizations />}
         />
 
         <Route
-          path="/super-admin/members"
+          path="/superadmin/members"
           element={<Members />}
         />
 
         <Route
-          path="/super-admin/payments"
+          path="/superadmin/payments"
           element={<Payments />}
         />
 
         <Route
-          path="/super-admin/subscriptions"
+          path="/superadmin/subscriptions"
           element={<Subscriptions />}
         />
 
         <Route
-          path="/super-admin/invoices"
-          element={<Invoices />}
-        />
-
-        <Route
-          path="/super-admin/renewals"
-          element={<Renewals />}
-        />
-
-        <Route
-          path="/super-admin/analytics"
+          path="/superadmin/analytics"
           element={<Analytics />}
         />
 
         <Route
-          path="/super-admin/automation"
+          path="/superadmin/settings"
+          element={<Settings />}
+        />
+
+        <Route
+          path="/superadmin/invoices"
+          element={<Invoices />}
+        />
+
+        <Route
+          path="/superadmin/renewals"
+          element={<Renewals />}
+        />
+
+        <Route
+          path="/superadmin/automation"
           element={<Automation />}
         />
 
         <Route
-          path="/super-admin/reports"
+          path="/superadmin/reports"
           element={<Reports />}
         />
 
         <Route
-          path="/super-admin/communication"
+          path="/superadmin/communication"
           element={<Communication />}
         />
-
-        <Route
-          path="/super-admin/settings"
-          element={<Settings />}
-        />
       </Route>
+
+      {/* Catch-all Fallback Route */}
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 }
-
-export default Router;

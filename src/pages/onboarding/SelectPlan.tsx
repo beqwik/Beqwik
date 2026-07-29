@@ -152,12 +152,12 @@ function SelectPlan() {
     }
 
     if (!organizationId) {
-      navigate("/create-organization", { replace: true });
+      navigate("/onboarding/create-org", { replace: true });
       return;
     }
 
     if (subscription) {
-      navigate("/admin", { replace: true });
+      navigate("/admin/dashboard", { replace: true });
       return;
     }
 

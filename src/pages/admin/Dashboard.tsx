@@ -44,11 +44,20 @@ import {
   getTestExams,
   createTestExam,
   getTestResults,
+  createTestResult,
+  updateTestResult,
+  deleteTestResult,
   getFeeReminders,
   triggerBatchFeeReminders,
   getTimetableSlots,
   getAssignmentsList,
+  createAssignment,
+  updateAssignment,
+  deleteAssignment,
   getStudyMaterials,
+  createStudyMaterial,
+  updateStudyMaterial,
+  deleteStudyMaterial,
   getAnnouncementsList,
   createAnnouncement,
   deleteAnnouncement,
@@ -137,9 +146,10 @@ export default function AdminDashboard() {
   const [showAddCourseModal, setShowAddCourseModal] = useState(false);
   const [courseName, setCourseName] = useState("");
   const [courseInstructor, setCourseInstructor] = useState("");
-  const [courseDay, setCourseDay] = useState("Mon & Wed");
+  const [courseDuration, setCourseDuration] = useState("6 Months");
+  const [courseStartDate, setCourseStartDate] = useState("2026-08-01");
+  const [courseEndDate, setCourseEndDate] = useState("2027-02-01");
   const [courseTiming, setCourseTiming] = useState("09:00 - 10:30 AM");
-  const [courseRoom, setCourseRoom] = useState("Lab 1");
   const [courseMaxCap, setCourseMaxCap] = useState("30");
 
   useEffect(() => {
@@ -393,10 +403,11 @@ export default function AdminDashboard() {
     const newCourse = await createAcademyClass(organization.id, {
       className: courseName,
       instructorName: courseInstructor || "Faculty Member",
-      dayOfWeek: courseDay,
-      timing: courseTiming,
-      room: courseRoom,
-      maxCapacity: parseInt(courseMaxCap) || 30
+      timing: courseTiming || "09:00 - 10:30 AM",
+      maxCapacity: parseInt(courseMaxCap) || 30,
+      courseDuration: courseDuration || "6 Months",
+      startDate: courseStartDate || "2026-08-01",
+      endDate: courseEndDate || "2027-02-01"
     });
 
     setClasses(prev => [...prev, newCourse]);
@@ -489,7 +500,23 @@ export default function AdminDashboard() {
           )}
 
           {activeTab === "assignments" && (
-            <AssignmentsModule assignments={assignments} />
+            <AssignmentsModule
+              assignments={assignments}
+              onCreateAssignment={async (asgData) => {
+                if (!organization?.id) return;
+                const created = await createAssignment(organization.id, asgData);
+                setAssignments(prev => [created, ...prev]);
+              }}
+              onUpdateAssignment={async (asgId, asgData) => {
+                if (!organization?.id) return;
+                await updateAssignment(organization.id, asgId, asgData);
+                setAssignments(prev => prev.map(a => a.id === asgId ? { ...a, ...asgData } : a));
+              }}
+              onDeleteAssignment={async (asgId) => {
+                await deleteAssignment(asgId, organization?.id);
+                setAssignments(prev => prev.filter(a => a.id !== asgId));
+              }}
+            />
           )}
 
           {activeTab === "attendance" && (
@@ -507,7 +534,23 @@ export default function AdminDashboard() {
           )}
 
           {activeTab === "results" && (
-            <ResultsModule results={results} />
+            <ResultsModule
+              results={results}
+              onCreateTestResult={async (resData) => {
+                if (!organization?.id) return;
+                const created = await createTestResult(organization.id, resData);
+                setResults(prev => [created, ...prev]);
+              }}
+              onUpdateTestResult={async (resId, resData) => {
+                if (!organization?.id) return;
+                await updateTestResult(organization.id, resId, resData);
+                setResults(prev => prev.map(r => r.id === resId ? { ...r, ...resData } : r));
+              }}
+              onDeleteTestResult={async (resId) => {
+                await deleteTestResult(resId, organization?.id);
+                setResults(prev => prev.filter(r => r.id !== resId));
+              }}
+            />
           )}
 
           {activeTab === "fees" && (
@@ -521,7 +564,23 @@ export default function AdminDashboard() {
           )}
 
           {activeTab === "studyMaterial" && (
-            <StudyMaterialModule materials={materials} />
+            <StudyMaterialModule
+              materials={materials}
+              onCreateStudyMaterial={async (matData) => {
+                if (!organization?.id) return;
+                const created = await createStudyMaterial(organization.id, matData);
+                setMaterials(prev => [created, ...prev]);
+              }}
+              onUpdateStudyMaterial={async (matId, matData) => {
+                if (!organization?.id) return;
+                await updateStudyMaterial(organization.id, matId, matData);
+                setMaterials(prev => prev.map(m => m.id === matId ? { ...m, ...matData } : m));
+              }}
+              onDeleteStudyMaterial={async (matId) => {
+                await deleteStudyMaterial(matId, organization?.id);
+                setMaterials(prev => prev.filter(m => m.id !== matId));
+              }}
+            />
           )}
 
           {activeTab === "reports" && (
@@ -741,42 +800,56 @@ export default function AdminDashboard() {
                   />
                 </div>
                 <div>
-                  <label className="block text-slate-600 mb-1 font-bold">Schedule Days</label>
+                  <label className="block text-slate-600 mb-1 font-bold">Course Duration</label>
                   <input
                     type="text"
-                    value={courseDay}
-                    onChange={e => setCourseDay(e.target.value)}
+                    placeholder="e.g. 6 Months"
+                    value={courseDuration}
+                    onChange={e => setCourseDuration(e.target.value)}
                     className="w-full px-3 py-2 border border-slate-200 rounded-xl"
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-slate-600 mb-1 font-bold">Timing</label>
+                  <label className="block text-slate-600 mb-1 font-bold">Start Date</label>
+                  <input
+                    type="date"
+                    value={courseStartDate}
+                    onChange={e => setCourseStartDate(e.target.value)}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-xl"
+                  />
+                </div>
+                <div>
+                  <label className="block text-slate-600 mb-1 font-bold">End Date</label>
+                  <input
+                    type="date"
+                    value={courseEndDate}
+                    onChange={e => setCourseEndDate(e.target.value)}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-xl"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-slate-600 mb-1 font-bold">Class Timing</label>
                   <input
                     type="text"
+                    placeholder="e.g. 09:00 - 10:30 AM"
                     value={courseTiming}
                     onChange={e => setCourseTiming(e.target.value)}
-                    className="w-full px-2.5 py-2 border border-slate-200 rounded-xl"
+                    className="w-full px-3 py-2 border border-slate-200 rounded-xl"
                   />
                 </div>
                 <div>
-                  <label className="block text-slate-600 mb-1 font-bold">Room</label>
-                  <input
-                    type="text"
-                    value={courseRoom}
-                    onChange={e => setCourseRoom(e.target.value)}
-                    className="w-full px-2.5 py-2 border border-slate-200 rounded-xl"
-                  />
-                </div>
-                <div>
-                  <label className="block text-slate-600 mb-1 font-bold">Capacity</label>
+                  <label className="block text-slate-600 mb-1 font-bold">Max Capacity</label>
                   <input
                     type="number"
                     value={courseMaxCap}
                     onChange={e => setCourseMaxCap(e.target.value)}
-                    className="w-full px-2.5 py-2 border border-slate-200 rounded-xl"
+                    className="w-full px-3 py-2 border border-slate-200 rounded-xl"
                   />
                 </div>
               </div>

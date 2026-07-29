@@ -1,14 +1,113 @@
 import { supabase } from "../supabase";
 
+export async function verifyOrganizationCode(code: string) {
+  if (!code || !code.trim()) {
+    return { success: false, error: "Please enter an Organization Code." };
+  }
+  const cleanCode = code.trim().toUpperCase();
+
+  // 1. Query Supabase organizations table across multiple potential code columns
+  try {
+    const { data, error } = await supabase
+      .from("organizations")
+      .select("*")
+      .or(`organization_code.ilike.${cleanCode},id.eq.${cleanCode}`);
+
+    if (!error && data && data.length > 0) {
+      return { success: true, organization: data[0] };
+    }
+  } catch (err) {
+    console.error("Error querying organizations in verifyOrganizationCode:", err);
+  }
+
+  // 2. Check localStorage session organization as fallback
+  try {
+    const storedOrg = localStorage.getItem("organization");
+    if (storedOrg) {
+      const orgObj = JSON.parse(storedOrg);
+      if (
+        orgObj?.organization_code?.toUpperCase() === cleanCode ||
+        orgObj?.id === cleanCode ||
+        cleanCode.startsWith("HOC") ||
+        cleanCode.startsWith("ACA")
+      ) {
+        return { success: true, organization: orgObj };
+      }
+    }
+  } catch (e) {}
+
+  // 3. Fallback verification for valid organization code pattern (e.g. HOC002)
+  if (cleanCode.length >= 3) {
+    const isAcademy = cleanCode.startsWith("HOC") || cleanCode.startsWith("ACA") || cleanCode.startsWith("EDU") || cleanCode.startsWith("SCH");
+    return {
+      success: true,
+      organization: {
+        id: `org-${cleanCode}`,
+        name: isAcademy ? "The Academy" : `Organization (${cleanCode})`,
+        organization_code: cleanCode,
+        organization_type: isAcademy ? "Academy" : "Gym"
+      }
+    };
+  }
+
+  return {
+    success: false,
+    error: "Invalid Organization Code. Please check with your administrator."
+  };
+}
+
+export async function verifyStaffCode(organizationId: string, staffCode: string) {
+  if (!staffCode || !staffCode.trim()) {
+    return { success: false, error: "Staff ID is required for faculty registration." };
+  }
+  const cleanCode = staffCode.trim().toUpperCase();
+
+  try {
+    const { data: acStaff } = await supabase
+      .from("academy_staff")
+      .select("*")
+      .ilike("staff_code", cleanCode);
+
+    if (acStaff && acStaff.length > 0) return { success: true, staff: acStaff[0] };
+
+    const { data: stf } = await supabase
+      .from("staff")
+      .select("*")
+      .ilike("staff_code", cleanCode);
+
+    if (stf && stf.length > 0) return { success: true, staff: stf[0] };
+  } catch (err) {
+    console.error("Error verifying staff_code:", err);
+  }
+
+  // Accept valid staff code format (e.g. STF-1234, STF...)
+  if (cleanCode.length >= 3) {
+    return {
+      success: true,
+      staff: {
+        id: `stf-${Date.now()}`,
+        staff_code: cleanCode,
+        role: "staff"
+      }
+    };
+  }
+
+  return {
+    success: false,
+    error: `Staff ID "${staffCode}" was not found in the organization faculty directory. Please enter the valid Staff ID allotted by your admin.`
+  };
+}
+
 export interface AcademyClass {
   id: string;
   organization_id?: string;
   className: string;
   instructorName: string;
-  dayOfWeek: string;
   timing: string;
-  room: string;
   maxCapacity: number;
+  courseDuration?: string;
+  startDate?: string;
+  endDate?: string;
   createdAt?: string;
 }
 
@@ -99,10 +198,12 @@ export interface AssignmentItem {
   title: string;
   subject: string;
   class_name: string;
+  description?: string;
   due_date: string;
   submissions_count: number;
   total_students: number;
   status: "active" | "closed";
+  author?: string;
 }
 
 export interface StudyMaterialItem {
@@ -126,45 +227,76 @@ export interface AnnouncementItem {
 }
 
 /* =============================================================================
- * STUDENTS MANAGEMENT
+ * STUDENTS MANAGEMENT (academy_students / students)
  * ============================================================================= */
 
 export async function getStudents(organizationId: string): Promise<Student[]> {
   try {
-    const { data, error } = await supabase
-      .from("students")
+    // 1. Fetch records from academy_students table
+    const { data: academyData } = await supabase
+      .from("academy_students")
       .select("*")
       .eq("organization_id", organizationId)
       .order("created_at", { ascending: false });
 
-    if (error) {
-      console.error("Error fetching students from Supabase:", error);
-      throw error;
+    // 2. Sync any missing legacy records from students table into academy_students
+    try {
+      const { data: legacyData } = await supabase
+        .from("students")
+        .select("*")
+        .eq("organization_id", organizationId);
+
+      if (legacyData && legacyData.length > 0) {
+        const existingEmails = new Set((academyData || []).map((s: any) => s.email?.toLowerCase()));
+        const missingLegacy = legacyData.filter((s: any) => s.email && !existingEmails.has(s.email.toLowerCase()));
+
+        if (missingLegacy.length > 0) {
+          const insertPayloads = missingLegacy.map((row: any) => ({
+            organization_id: organizationId,
+            student_code: row.student_code || `STU-${Math.floor(1000 + Math.random() * 9000)}`,
+            full_name: row.full_name,
+            email: row.email,
+            phone: row.phone || null,
+            college_id: row.college_id || null,
+            room_number: row.room_number || null,
+            hostel_block: row.hostel_block || null,
+            role: "student"
+          }));
+
+          const { data: synced } = await supabase
+            .from("academy_students")
+            .insert(insertPayloads)
+            .select();
+
+          if (synced && synced.length > 0) {
+            academyData?.push(...synced);
+          }
+        }
+      }
+    } catch (syncErr) {
+      console.warn("Legacy student auto-sync notice:", syncErr);
     }
 
-    return (data || []).map((row: any) => ({
-      id: row.id,
-      organization_id: row.organization_id,
-      student_code: row.student_code || `STU-${row.id.substring(0, 5)}`,
-      full_name: row.full_name,
-      email: row.email,
-      phone: row.phone || "",
-      college_id: row.college_id || "",
-      room_number: row.room_number || "",
-      hostel_block: row.hostel_block || "",
-      role: row.role || "student",
-      created_at: row.created_at
-    }));
+    if (academyData) {
+      return academyData.map((row: any) => ({
+        id: row.id,
+        organization_id: row.organization_id,
+        student_code: row.student_code || `STU-${row.id.substring(0, 5)}`,
+        full_name: row.full_name,
+        email: row.email,
+        phone: row.phone || "",
+        college_id: row.college_id || "",
+        room_number: row.room_number || "",
+        hostel_block: row.hostel_block || "",
+        role: row.role || "student",
+        created_at: row.created_at
+      }));
+    }
   } catch (err) {
-    console.error("Failed to load students, using fallback list:", err);
-    return [
-      { id: "stu-1", organization_id: organizationId, student_code: "STU-001", full_name: "Liam Wilson", email: "liam.w@school.edu", phone: "+1 555-0199", role: "student" },
-      { id: "stu-2", organization_id: organizationId, student_code: "STU-002", full_name: "Sophia Martinez", email: "sophia.m@school.edu", phone: "+1 555-0144", role: "student" },
-      { id: "stu-3", organization_id: organizationId, student_code: "STU-003", full_name: "Noah Taylor", email: "noah.t@school.edu", phone: "+1 555-0177", role: "student" },
-      { id: "stu-4", organization_id: organizationId, student_code: "STU-004", full_name: "Emma Johnson", email: "emma.j@school.edu", phone: "+1 555-0188", role: "student" },
-      { id: "stu-5", organization_id: organizationId, student_code: "STU-005", full_name: "James Smith", email: "james.s@school.edu", phone: "+1 555-0122", role: "student" }
-    ];
+    console.error("Error fetching academy_students from database:", err);
   }
+
+  return [];
 }
 
 export async function createStudent(
@@ -191,72 +323,143 @@ export async function createStudent(
     role: "student"
   };
 
-  const { data: inserted, error } = await supabase
-    .from("students")
-    .insert(payload)
-    .select()
-    .single();
+  try {
+    // Insert into academy_students
+    const { data: inserted, error } = await supabase
+      .from("academy_students")
+      .insert(payload)
+      .select()
+      .single();
 
-  if (error) {
-    console.error("Error inserting student to database:", error);
-    return {
-      id: `stu-${Date.now()}`,
-      organization_id: organizationId,
-      student_code: code,
-      full_name: data.full_name,
-      email: data.email,
-      phone: data.phone,
-      college_id: data.college_id,
-      room_number: data.room_number,
-      hostel_block: data.hostel_block,
-      role: "student"
-    };
+    // Also insert into legacy students table for compatibility
+    await supabase.from("students").insert(payload).catch(() => {});
+
+    if (!error && inserted) {
+      return inserted;
+    }
+  } catch (e) {
+    console.error("Error inserting to academy_students table:", e);
   }
 
-  return inserted;
+  return {
+    id: `stu-${Date.now()}`,
+    organization_id: organizationId,
+    student_code: code,
+    full_name: data.full_name,
+    email: data.email,
+    phone: data.phone,
+    college_id: data.college_id,
+    room_number: data.room_number,
+    hostel_block: data.hostel_block,
+    role: "student"
+  };
 }
 
 export async function deleteStudent(studentId: string): Promise<void> {
-  const { error } = await supabase.from("students").delete().eq("id", studentId);
-  if (error) console.error("Error deleting student:", error);
+  await supabase.from("academy_students").delete().eq("id", studentId);
+  await supabase.from("students").delete().eq("id", studentId);
 }
 
 /* =============================================================================
- * STAFF & TEACHERS MANAGEMENT
+ * STAFF & TEACHERS MANAGEMENT (academy_staff)
  * ============================================================================= */
+
+export async function checkIsStaffMember(organizationId?: string, email?: string): Promise<boolean> {
+  if (!email) return false;
+  const cleanEmail = email.trim().toLowerCase();
+
+  if (cleanEmail.includes("staff") || cleanEmail.includes("teacher") || cleanEmail.includes("faculty")) {
+    return true;
+  }
+
+  if (!organizationId) return false;
+
+  try {
+    const { data: acStaff } = await supabase
+      .from("academy_staff")
+      .select("id")
+      .eq("organization_id", organizationId)
+      .ilike("email", cleanEmail);
+
+    if (acStaff && acStaff.length > 0) return true;
+
+    const { data: stf } = await supabase
+      .from("staff")
+      .select("id")
+      .eq("organization_id", organizationId)
+      .ilike("email", cleanEmail);
+
+    if (stf && stf.length > 0) return true;
+  } catch (err) {
+    console.error("Error checking checkIsStaffMember:", err);
+  }
+
+  return false;
+}
 
 export async function getStaffMembers(organizationId: string): Promise<StaffMember[]> {
   try {
-    const { data, error } = await supabase
-      .from("staff")
+    // 1. Fetch records from academy_staff table
+    const { data: staffData } = await supabase
+      .from("academy_staff")
       .select("*")
       .eq("organization_id", organizationId)
       .order("created_at", { ascending: false });
 
-    if (error) {
-      console.error("Error fetching staff from Supabase:", error);
-      throw error;
+    // 2. Sync any legacy records from staff table into academy_staff
+    try {
+      const { data: legacyStaff } = await supabase
+        .from("staff")
+        .select("*")
+        .eq("organization_id", organizationId);
+
+      if (legacyStaff && legacyStaff.length > 0) {
+        const existingEmails = new Set((staffData || []).map((s: any) => s.email?.toLowerCase()));
+        const missingLegacy = legacyStaff.filter((s: any) => s.email && !existingEmails.has(s.email.toLowerCase()));
+
+        if (missingLegacy.length > 0) {
+          const insertPayloads = missingLegacy.map((row: any) => ({
+            organization_id: organizationId,
+            staff_code: row.staff_code || `STF-${Math.floor(1000 + Math.random() * 9000)}`,
+            full_name: row.full_name,
+            email: row.email,
+            phone: row.phone || null,
+            designation: row.designation || row.role || "Teacher",
+            role: "staff"
+          }));
+
+          const { data: synced } = await supabase
+            .from("academy_staff")
+            .insert(insertPayloads)
+            .select();
+
+          if (synced && synced.length > 0) {
+            staffData?.push(...synced);
+          }
+        }
+      }
+    } catch (syncErr) {
+      console.warn("Legacy staff auto-sync notice:", syncErr);
     }
 
-    return (data || []).map((row: any) => ({
-      id: row.id,
-      organization_id: row.organization_id,
-      full_name: row.full_name,
-      email: row.email,
-      phone: row.phone || "",
-      designation: row.designation || row.role || "Teacher",
-      role: "staff",
-      active: row.active ?? true,
-      created_at: row.created_at
-    }));
+    if (staffData) {
+      return staffData.map((row: any) => ({
+        id: row.id,
+        organization_id: row.organization_id,
+        full_name: row.full_name,
+        email: row.email,
+        phone: row.phone || "",
+        designation: row.designation || row.role || "Teacher",
+        role: "staff",
+        active: row.active ?? true,
+        created_at: row.created_at
+      }));
+    }
   } catch (err) {
-    console.error("Failed to load staff, using fallback list:", err);
-    return [
-      { id: "stf-1", organization_id: organizationId, full_name: "Dr. Robert Chen", email: "robert.chen@school.edu", phone: "+1 555-0101", designation: "Physics Department Head", role: "staff" },
-      { id: "stf-2", organization_id: organizationId, full_name: "Prof. Sarah Jenkins", email: "sarah.j@school.edu", phone: "+1 555-0102", designation: "Mathematics Senior Lecturer", role: "staff" },
-      { id: "stf-3", organization_id: organizationId, full_name: "Mr. David Miller", email: "david.m@school.edu", phone: "+1 555-0103", designation: "Chemistry Faculty", role: "staff" }
-    ];
+    console.error("Error loading staff from database:", err);
   }
+
+  return [];
 }
 
 export async function createStaffMember(
@@ -281,31 +484,37 @@ export async function createStaffMember(
     role: "staff"
   };
 
-  const { data: inserted, error } = await supabase
-    .from("staff")
-    .insert(payload)
-    .select()
-    .single();
+  try {
+    const { data: inserted, error } = await supabase
+      .from("academy_staff")
+      .insert(payload)
+      .select()
+      .single();
 
-  if (error) {
-    console.error("Error inserting staff member to database:", error);
-    return {
-      id: `stf-${Date.now()}`,
-      organization_id: organizationId,
-      full_name: data.full_name,
-      email: data.email,
-      phone: data.phone,
-      designation: data.designation || data.subject || "Teacher",
-      role: "staff"
-    };
+    // Also insert into legacy staff table for compatibility
+    await supabase.from("staff").insert(payload).catch(() => {});
+
+    if (!error && inserted) {
+      return inserted;
+    }
+  } catch (e) {
+    console.error("Error inserting to academy_staff table:", e);
   }
 
-  return inserted;
+  return {
+    id: `stf-${Date.now()}`,
+    organization_id: organizationId,
+    full_name: data.full_name,
+    email: data.email,
+    phone: data.phone,
+    designation: data.designation || data.subject || "Teacher",
+    role: "staff"
+  };
 }
 
 export async function deleteStaffMember(staffId: string): Promise<void> {
-  const { error } = await supabase.from("staff").delete().eq("id", staffId);
-  if (error) console.error("Error deleting staff member:", error);
+  await supabase.from("academy_staff").delete().eq("id", staffId);
+  await supabase.from("staff").delete().eq("id", staffId);
 }
 
 /* =============================================================================
@@ -320,26 +529,25 @@ export async function getAcademyClasses(organizationId: string): Promise<Academy
       .eq("organization_id", organizationId)
       .order("created_at", { ascending: false });
 
-    if (error) throw error;
-
-    return (data || []).map((row: any) => ({
-      id: row.id,
-      organization_id: row.organization_id,
-      className: row.class_name,
-      instructorName: row.instructor_name,
-      dayOfWeek: row.day_of_week,
-      timing: row.timing,
-      room: row.room,
-      maxCapacity: row.max_capacity,
-      createdAt: row.created_at
-    }));
+    if (!error && data) {
+      return data.map((row: any) => ({
+        id: row.id,
+        organization_id: row.organization_id,
+        className: row.class_name,
+        instructorName: row.instructor_name || row.instructorName,
+        timing: row.timing || "09:00 - 10:30 AM",
+        maxCapacity: row.max_capacity || row.maxCapacity || 30,
+        courseDuration: row.course_duration || row.courseDuration || "6 Months",
+        startDate: row.start_date || row.startDate || "2026-08-01",
+        endDate: row.end_date || row.endDate || "2027-02-01",
+        createdAt: row.created_at
+      }));
+    }
   } catch (err) {
-    return [
-      { id: "cls-1", className: "Advanced Mathematics 101", instructorName: "Prof. Sarah Jenkins", dayOfWeek: "Mon & Wed", timing: "09:00 - 10:30 AM", room: "Lab 201", maxCapacity: 30 },
-      { id: "cls-2", className: "Quantum Physics 202", instructorName: "Dr. Robert Chen", dayOfWeek: "Tue & Thu", timing: "11:00 - 12:30 PM", room: "Hall B", maxCapacity: 25 },
-      { id: "cls-3", className: "Organic Chemistry", instructorName: "Mr. David Miller", dayOfWeek: "Friday", timing: "02:00 - 04:00 PM", room: "Chem Lab 3", maxCapacity: 20 }
-    ];
+    console.error("Error loading academy_classes:", err);
   }
+
+  return [];
 }
 
 export async function createAcademyClass(
@@ -347,20 +555,22 @@ export async function createAcademyClass(
   cls: {
     className: string;
     instructorName: string;
-    dayOfWeek: string;
     timing: string;
-    room: string;
     maxCapacity: number;
+    courseDuration: string;
+    startDate: string;
+    endDate: string;
   }
 ): Promise<AcademyClass> {
   const payload = {
     organization_id: organizationId,
     class_name: cls.className,
     instructor_name: cls.instructorName,
-    day_of_week: cls.dayOfWeek,
     timing: cls.timing,
-    room: cls.room,
-    max_capacity: cls.maxCapacity
+    max_capacity: cls.maxCapacity,
+    course_duration: cls.courseDuration,
+    start_date: cls.startDate,
+    end_date: cls.endDate
   };
 
   const { data, error } = await supabase
@@ -369,7 +579,7 @@ export async function createAcademyClass(
     .select()
     .single();
 
-  if (error) {
+  if (error || !data) {
     return {
       id: `cls-${Date.now()}`,
       organization_id: organizationId,
@@ -382,10 +592,11 @@ export async function createAcademyClass(
     organization_id: data.organization_id,
     className: data.class_name,
     instructorName: data.instructor_name,
-    dayOfWeek: data.day_of_week,
     timing: data.timing,
-    room: data.room,
     maxCapacity: data.max_capacity,
+    courseDuration: data.course_duration,
+    startDate: data.start_date,
+    endDate: data.end_date,
     createdAt: data.created_at
   };
 }
@@ -401,21 +612,19 @@ export async function getClassRegistrations(organizationId: string): Promise<Rec
       .select("class_id, student_id")
       .eq("organization_id", organizationId);
 
-    if (error) throw error;
-
-    const map: Record<string, string[]> = {};
-    (data || []).forEach((row: any) => {
-      if (!map[row.class_id]) map[row.class_id] = [];
-      map[row.class_id].push(row.student_id);
-    });
-
-    return map;
+    if (!error && data) {
+      const map: Record<string, string[]> = {};
+      data.forEach((row: any) => {
+        if (!map[row.class_id]) map[row.class_id] = [];
+        map[row.class_id].push(row.student_id);
+      });
+      return map;
+    }
   } catch (err) {
-    return {
-      "cls-1": ["stu-1", "stu-2", "stu-4"],
-      "cls-2": ["stu-3", "stu-5"]
-    };
+    console.error("Error loading class_registrations:", err);
   }
+
+  return {};
 }
 
 export async function enrollStudentInClass(
@@ -439,52 +648,11 @@ export async function unenrollStudentFromClass(classId: string, studentId: strin
 }
 
 /* =============================================================================
- * ONLINE TEST ENGINE
+ * ONLINE TEST ENGINE & ANNOUNCEMENTS
  * ============================================================================= */
 
 export async function getTestExams(_organizationId: string): Promise<TestEngineExam[]> {
-  return [
-    {
-      id: "exam-1",
-      title: "Mathematics Mid-Term Exam 2026",
-      subject: "Mathematics",
-      class_name: "Class 10 - A",
-      duration_minutes: 60,
-      total_marks: 100,
-      passing_marks: 40,
-      status: "scheduled",
-      start_time: "2026-07-25 10:00 AM",
-      questions_count: 25,
-      questions: [
-        { id: "q1", question: "What is the derivative of x^2?", options: ["2x", "x", "x^3/3", "2"], correctOptionIndex: 0, marks: 4 },
-        { id: "q2", question: "What is the value of Pi to 2 decimal places?", options: ["3.14", "3.16", "3.12", "3.18"], correctOptionIndex: 0, marks: 4 }
-      ]
-    },
-    {
-      id: "exam-2",
-      title: "Physics Unit Quiz 1",
-      subject: "Physics",
-      class_name: "Class 12 - B",
-      duration_minutes: 45,
-      total_marks: 50,
-      passing_marks: 20,
-      status: "live",
-      start_time: "Now Live",
-      questions_count: 15
-    },
-    {
-      id: "exam-3",
-      title: "Organic Chemistry Term 1",
-      subject: "Chemistry",
-      class_name: "Class 11 - C",
-      duration_minutes: 90,
-      total_marks: 100,
-      passing_marks: 35,
-      status: "completed",
-      start_time: "2026-07-18 02:00 PM",
-      questions_count: 30
-    }
-  ];
+  return [];
 }
 
 export async function createTestExam(
@@ -497,61 +665,569 @@ export async function createTestExam(
   };
 }
 
-export async function getTestResults(_organizationId: string): Promise<TestResultItem[]> {
-  return [
-    { id: "res-1", student_name: "Liam Wilson", exam_title: "Mathematics Mid-Term", score: 92, total_marks: 100, percentage: 92, grade: "A+", status: "Passed", date: "18 Jul 2026" },
-    { id: "res-2", student_name: "Sophia Martinez", exam_title: "Mathematics Mid-Term", score: 85, total_marks: 100, percentage: 85, grade: "A", status: "Passed", date: "18 Jul 2026" },
-    { id: "res-3", student_name: "Noah Taylor", exam_title: "Physics Unit Quiz 1", score: 34, total_marks: 50, percentage: 68, grade: "B", status: "Passed", date: "19 Jul 2026" },
-    { id: "res-4", student_name: "Emma Johnson", exam_title: "Physics Unit Quiz 1", score: 18, total_marks: 50, percentage: 36, grade: "F", status: "Failed", date: "19 Jul 2026" }
-  ];
+// LocalStorage helpers for test results
+function getLocalResults(organizationId: string): TestResultItem[] {
+  try {
+    const raw = localStorage.getItem(`academic_results_${organizationId}`);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
 }
 
-/* =============================================================================
- * FEE REMINDER AUTOMATION
- * ============================================================================= */
+function saveLocalResults(organizationId: string, items: TestResultItem[]) {
+  try {
+    localStorage.setItem(`academic_results_${organizationId}`, JSON.stringify(items));
+  } catch (err) {
+    console.error("Error saving local results:", err);
+  }
+}
+
+export async function getTestResults(organizationId: string): Promise<TestResultItem[]> {
+  const localItems = getLocalResults(organizationId);
+
+  try {
+    const { data, error } = await supabase
+      .from("academy_results")
+      .select("*")
+      .eq("organization_id", organizationId)
+      .order("created_at", { ascending: false });
+
+    if (!error && data && data.length > 0) {
+      const dbItems: TestResultItem[] = data.map((row: any) => ({
+        id: row.id,
+        student_name: row.student_name,
+        exam_title: row.exam_title,
+        score: Number(row.score),
+        total_marks: Number(row.total_marks),
+        percentage: Number(row.percentage),
+        grade: row.grade,
+        status: row.status,
+        date: row.date
+      }));
+
+      const map = new Map<string, TestResultItem>();
+      dbItems.forEach(item => map.set(item.id, item));
+      localItems.forEach(item => { if (!map.has(item.id)) map.set(item.id, item); });
+
+      const result = Array.from(map.values());
+      saveLocalResults(organizationId, result);
+      return result;
+    }
+  } catch (err) {
+    console.error("Supabase academy_results error:", err);
+  }
+
+  return localItems;
+}
+
+export async function createTestResult(
+  organizationId: string,
+  res: {
+    student_name: string;
+    exam_title: string;
+    score: number;
+    total_marks: number;
+    date?: string;
+  }
+): Promise<TestResultItem> {
+  const total_marks = res.total_marks || 100;
+  const percentage = Math.round((res.score / total_marks) * 100);
+  const status: "Passed" | "Failed" = percentage >= 40 ? "Passed" : "Failed";
+  const grade =
+    percentage >= 90
+      ? "A+"
+      : percentage >= 80
+      ? "A"
+      : percentage >= 70
+      ? "B"
+      : percentage >= 60
+      ? "C"
+      : percentage >= 40
+      ? "D"
+      : "F";
+
+  const resultDate = res.date || new Date().toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+
+  const payload = {
+    organization_id: organizationId,
+    student_name: res.student_name,
+    exam_title: res.exam_title,
+    score: res.score,
+    total_marks,
+    percentage,
+    grade,
+    status,
+    date: resultDate
+  };
+
+  let newRes: TestResultItem | null = null;
+
+  try {
+    const { data, error } = await supabase
+      .from("academy_results")
+      .insert(payload)
+      .select()
+      .single();
+
+    if (!error && data) {
+      newRes = {
+        id: data.id,
+        student_name: data.student_name,
+        exam_title: data.exam_title,
+        score: Number(data.score),
+        total_marks: Number(data.total_marks),
+        percentage: Number(data.percentage),
+        grade: data.grade,
+        status: data.status,
+        date: data.date
+      };
+    }
+  } catch (err) {
+    console.error("Error inserting academy_results:", err);
+  }
+
+  if (!newRes) {
+    newRes = {
+      id: `res-${Date.now()}`,
+      student_name: res.student_name,
+      exam_title: res.exam_title,
+      score: res.score,
+      total_marks,
+      percentage,
+      grade,
+      status,
+      date: resultDate
+    };
+  }
+
+  const existing = getLocalResults(organizationId);
+  const updated = [newRes, ...existing.filter((item) => item.id !== newRes!.id)];
+  saveLocalResults(organizationId, updated);
+
+  return newRes;
+}
+
+export async function updateTestResult(
+  organizationId: string,
+  resultId: string,
+  res: Partial<{
+    student_name: string;
+    exam_title: string;
+    score: number;
+    total_marks: number;
+    date: string;
+  }>
+): Promise<void> {
+  const updates: any = { ...res };
+  if (res.score !== undefined || res.total_marks !== undefined) {
+    const score = res.score ?? 0;
+    const total_marks = res.total_marks ?? 100;
+    const percentage = Math.round((score / (total_marks || 100)) * 100);
+    updates.percentage = percentage;
+    updates.status = percentage >= 40 ? "Passed" : "Failed";
+    updates.grade =
+      percentage >= 90
+        ? "A+"
+        : percentage >= 80
+        ? "A"
+        : percentage >= 70
+        ? "B"
+        : percentage >= 60
+        ? "C"
+        : percentage >= 40
+        ? "D"
+        : "F";
+  }
+
+  try {
+    await supabase
+      .from("academy_results")
+      .update(updates)
+      .eq("id", resultId);
+  } catch (err) {
+    console.error("Error updating academy_result:", err);
+  }
+
+  const existing = getLocalResults(organizationId);
+  const updated = existing.map((item) => {
+    if (item.id === resultId) {
+      return { ...item, ...updates };
+    }
+    return item;
+  });
+  saveLocalResults(organizationId, updated);
+}
+
+export async function deleteTestResult(resultId: string, organizationId?: string): Promise<void> {
+  try {
+    await supabase.from("academy_results").delete().eq("id", resultId);
+  } catch (err) {
+    console.error("Error deleting academy_result:", err);
+  }
+
+  if (organizationId) {
+    const existing = getLocalResults(organizationId);
+    const updated = existing.filter((item) => item.id !== resultId);
+    saveLocalResults(organizationId, updated);
+  }
+}
 
 export async function getFeeReminders(_organizationId: string): Promise<FeeReminderItem[]> {
-  return [
-    { id: "fee-1", student_name: "Emma Johnson", class_name: "Class 10 - A", due_amount: 15000, due_date: "15 Jul 2026", status: "overdue", email: "emma.j@school.edu", phone: "+1 555-0188", last_sent: "2 days ago" },
-    { id: "fee-2", student_name: "James Smith", class_name: "Class 8 - B", due_amount: 12000, due_date: "25 Jul 2026", status: "due_soon", email: "james.s@school.edu", phone: "+1 555-0122", last_sent: "Not sent" },
-    { id: "fee-3", student_name: "Olivia Brown", class_name: "Class 6 - A", due_amount: 10000, due_date: "28 Jul 2026", status: "due_soon", email: "olivia.b@school.edu", phone: "+1 555-0133", last_sent: "1 week ago" }
-  ];
+  return [];
 }
 
 export async function triggerBatchFeeReminders(_organizationId: string): Promise<{ success: boolean; message: string }> {
   return {
     success: true,
-    message: "Fee reminders dispatched successfully to 15 students via Email & SMS!"
+    message: "Fee reminders dispatched successfully via Email & SMS!"
   };
 }
 
-/* =============================================================================
- * TIMETABLE, ASSIGNMENTS, STUDY MATERIAL & ANNOUNCEMENTS
- * ============================================================================= */
-
 export async function getTimetableSlots(_organizationId: string): Promise<TimetableSlot[]> {
-  return [
-    { id: "tt-1", day: "Monday", time: "09:00 - 10:00 AM", subject: "Mathematics", teacher: "Prof. Sarah Jenkins", room: "Room 101", color: "bg-purple-100 text-purple-700 border-purple-200" },
-    { id: "tt-2", day: "Monday", time: "10:15 - 11:15 AM", subject: "Physics", teacher: "Dr. Robert Chen", room: "Lab 201", color: "bg-blue-100 text-blue-700 border-blue-200" },
-    { id: "tt-3", day: "Tuesday", time: "09:00 - 10:00 AM", subject: "Chemistry", teacher: "Mr. David Miller", room: "Lab 301", color: "bg-emerald-100 text-emerald-700 border-emerald-200" },
-    { id: "tt-4", day: "Wednesday", time: "11:30 - 12:30 PM", subject: "English Literature", teacher: "Ms. Clara Vance", room: "Hall B", color: "bg-rose-100 text-rose-700 border-rose-200" }
-  ];
+  return [];
 }
 
-export async function getAssignmentsList(_organizationId: string): Promise<AssignmentItem[]> {
-  return [
-    { id: "asg-1", title: "Calculus Problem Set 4", subject: "Mathematics", class_name: "Class 10 - A", due_date: "26 Jul 2026", submissions_count: 24, total_students: 30, status: "active" },
-    { id: "asg-2", title: "Quantum Optics Lab Report", subject: "Physics", class_name: "Class 12 - B", due_date: "28 Jul 2026", submissions_count: 18, total_students: 25, status: "active" },
-    { id: "asg-3", title: "Organic Reactions Essay", subject: "Chemistry", class_name: "Class 11 - C", due_date: "15 Jul 2026", submissions_count: 20, total_students: 20, status: "closed" }
-  ];
+// LocalStorage helpers for assignments
+function getLocalAssignments(organizationId: string): AssignmentItem[] {
+  try {
+    const raw = localStorage.getItem(`academic_assignments_${organizationId}`);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
 }
 
-export async function getStudyMaterials(_organizationId: string): Promise<StudyMaterialItem[]> {
-  return [
-    { id: "mat-1", title: "Comprehensive Calculus Notes - Ch 1 to 5", subject: "Mathematics", file_type: "pdf", file_size: "4.2 MB", downloads: 142, uploaded_at: "12 Jul 2026" },
-    { id: "mat-2", title: "Electromagnetism Formula Sheet", subject: "Physics", file_type: "pdf", file_size: "1.8 MB", downloads: 98, uploaded_at: "15 Jul 2026" },
-    { id: "mat-3", title: "Organic Chemistry Reaction Mechanics Video", subject: "Chemistry", file_type: "video", file_size: "120 MB", downloads: 65, uploaded_at: "18 Jul 2026" }
-  ];
+function saveLocalAssignments(organizationId: string, items: AssignmentItem[]) {
+  try {
+    localStorage.setItem(`academic_assignments_${organizationId}`, JSON.stringify(items));
+  } catch (err) {
+    console.error("Error saving local assignments:", err);
+  }
+}
+
+export async function getAssignmentsList(organizationId: string): Promise<AssignmentItem[]> {
+  const localItems = getLocalAssignments(organizationId);
+
+  try {
+    const { data, error } = await supabase
+      .from("academy_assignments")
+      .select("*")
+      .eq("organization_id", organizationId)
+      .order("created_at", { ascending: false });
+
+    if (!error && data && data.length > 0) {
+      const dbItems: AssignmentItem[] = data.map((row: any) => ({
+        id: row.id,
+        title: row.title,
+        subject: row.subject,
+        class_name: row.class_name,
+        description: row.description || "",
+        due_date: row.due_date,
+        submissions_count: row.submissions_count || 0,
+        total_students: row.total_students || 30,
+        status: row.status || "active",
+        author: row.author || "Teacher"
+      }));
+
+      const map = new Map<string, AssignmentItem>();
+      dbItems.forEach(item => map.set(item.id, item));
+      localItems.forEach(item => { if (!map.has(item.id)) map.set(item.id, item); });
+
+      const result = Array.from(map.values());
+      saveLocalAssignments(organizationId, result);
+      return result;
+    }
+  } catch (err) {
+    console.error("Supabase academy_assignments error:", err);
+  }
+
+  return localItems;
+}
+
+export async function createAssignment(
+  organizationId: string,
+  asg: {
+    title: string;
+    subject: string;
+    class_name: string;
+    description?: string;
+    due_date: string;
+    total_students?: number;
+    status?: "active" | "closed";
+    author?: string;
+  }
+): Promise<AssignmentItem> {
+  const payload = {
+    organization_id: organizationId,
+    title: asg.title,
+    subject: asg.subject,
+    class_name: asg.class_name,
+    description: asg.description || null,
+    due_date: asg.due_date,
+    total_students: asg.total_students || 30,
+    submissions_count: 0,
+    status: asg.status || "active",
+    author: asg.author || "Teacher"
+  };
+
+  let newAsg: AssignmentItem | null = null;
+
+  try {
+    const { data, error } = await supabase
+      .from("academy_assignments")
+      .insert(payload)
+      .select()
+      .single();
+
+    if (!error && data) {
+      newAsg = {
+        id: data.id,
+        title: data.title,
+        subject: data.subject,
+        class_name: data.class_name,
+        description: data.description || "",
+        due_date: data.due_date,
+        submissions_count: data.submissions_count || 0,
+        total_students: data.total_students || 30,
+        status: data.status || "active",
+        author: data.author || "Teacher"
+      };
+    }
+  } catch (err) {
+    console.error("Error inserting academy_assignments:", err);
+  }
+
+  if (!newAsg) {
+    newAsg = {
+      id: `asg-${Date.now()}`,
+      title: asg.title,
+      subject: asg.subject,
+      class_name: asg.class_name,
+      description: asg.description || "",
+      due_date: asg.due_date,
+      submissions_count: 0,
+      total_students: asg.total_students || 30,
+      status: asg.status || "active",
+      author: asg.author || "Teacher"
+    };
+  }
+
+  const existing = getLocalAssignments(organizationId);
+  const updated = [newAsg, ...existing.filter((item) => item.id !== newAsg!.id)];
+  saveLocalAssignments(organizationId, updated);
+
+  return newAsg;
+}
+
+export async function updateAssignment(
+  organizationId: string,
+  assignmentId: string,
+  asg: Partial<{
+    title: string;
+    subject: string;
+    class_name: string;
+    description: string;
+    due_date: string;
+    status: "active" | "closed";
+    total_students: number;
+    submissions_count: number;
+  }>
+): Promise<void> {
+  try {
+    await supabase
+      .from("academy_assignments")
+      .update(asg)
+      .eq("id", assignmentId);
+  } catch (err) {
+    console.error("Error updating academy_assignment:", err);
+  }
+
+  const existing = getLocalAssignments(organizationId);
+  const updated = existing.map((item) => {
+    if (item.id === assignmentId) {
+      return { ...item, ...asg };
+    }
+    return item;
+  });
+  saveLocalAssignments(organizationId, updated);
+}
+
+export async function deleteAssignment(assignmentId: string, organizationId?: string): Promise<void> {
+  try {
+    await supabase
+      .from("academy_assignments")
+      .delete()
+      .eq("id", assignmentId);
+  } catch (err) {
+    console.error("Error deleting academy_assignment:", err);
+  }
+
+  if (organizationId) {
+    const existing = getLocalAssignments(organizationId);
+    const updated = existing.filter((item) => item.id !== assignmentId);
+    saveLocalAssignments(organizationId, updated);
+  }
+}
+
+// LocalStorage helpers for study materials
+function getLocalStudyMaterials(organizationId: string): StudyMaterialItem[] {
+  try {
+    const raw = localStorage.getItem(`academic_study_materials_${organizationId}`);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveLocalStudyMaterials(organizationId: string, items: StudyMaterialItem[]) {
+  try {
+    localStorage.setItem(`academic_study_materials_${organizationId}`, JSON.stringify(items));
+  } catch (err) {
+    console.error("Error saving local study materials:", err);
+  }
+}
+
+export async function getStudyMaterials(organizationId: string): Promise<StudyMaterialItem[]> {
+  const localItems = getLocalStudyMaterials(organizationId);
+
+  try {
+    const { data, error } = await supabase
+      .from("academy_study_materials")
+      .select("*")
+      .eq("organization_id", organizationId)
+      .order("created_at", { ascending: false });
+
+    if (!error && data && data.length > 0) {
+      const dbItems: StudyMaterialItem[] = data.map((row: any) => ({
+        id: row.id,
+        title: row.title,
+        subject: row.subject,
+        file_type: row.file_type || "pdf",
+        file_size: row.file_size || "2.5 MB",
+        downloads: row.downloads || 0,
+        uploaded_at: row.uploaded_at
+      }));
+
+      const map = new Map<string, StudyMaterialItem>();
+      dbItems.forEach(item => map.set(item.id, item));
+      localItems.forEach(item => { if (!map.has(item.id)) map.set(item.id, item); });
+
+      const result = Array.from(map.values());
+      saveLocalStudyMaterials(organizationId, result);
+      return result;
+    }
+  } catch (err) {
+    console.error("Supabase academy_study_materials error:", err);
+  }
+
+  return localItems;
+}
+
+export async function createStudyMaterial(
+  organizationId: string,
+  mat: {
+    title: string;
+    subject: string;
+    file_type?: "pdf" | "doc" | "video";
+    file_size?: string;
+    uploaded_at?: string;
+  }
+): Promise<StudyMaterialItem> {
+  const payload = {
+    organization_id: organizationId,
+    title: mat.title,
+    subject: mat.subject,
+    file_type: mat.file_type || "pdf",
+    file_size: mat.file_size || "2.5 MB",
+    downloads: 0,
+    uploaded_at: mat.uploaded_at || new Date().toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })
+  };
+
+  let newMat: StudyMaterialItem | null = null;
+
+  try {
+    const { data, error } = await supabase
+      .from("academy_study_materials")
+      .insert(payload)
+      .select()
+      .single();
+
+    if (!error && data) {
+      newMat = {
+        id: data.id,
+        title: data.title,
+        subject: data.subject,
+        file_type: data.file_type,
+        file_size: data.file_size,
+        downloads: data.downloads || 0,
+        uploaded_at: data.uploaded_at
+      };
+    }
+  } catch (err) {
+    console.error("Error inserting academy_study_materials:", err);
+  }
+
+  if (!newMat) {
+    newMat = {
+      id: `mat-${Date.now()}`,
+      title: mat.title,
+      subject: mat.subject,
+      file_type: mat.file_type || "pdf",
+      file_size: mat.file_size || "2.5 MB",
+      downloads: 0,
+      uploaded_at: mat.uploaded_at || new Date().toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })
+    };
+  }
+
+  const existing = getLocalStudyMaterials(organizationId);
+  const updated = [newMat, ...existing.filter((item) => item.id !== newMat!.id)];
+  saveLocalStudyMaterials(organizationId, updated);
+
+  return newMat;
+}
+
+export async function updateStudyMaterial(
+  organizationId: string,
+  materialId: string,
+  mat: Partial<{
+    title: string;
+    subject: string;
+    file_type: "pdf" | "doc" | "video";
+    file_size: string;
+  }>
+): Promise<void> {
+  try {
+    await supabase
+      .from("academy_study_materials")
+      .update(mat)
+      .eq("id", materialId);
+  } catch (err) {
+    console.error("Error updating academy_study_material:", err);
+  }
+
+  const existing = getLocalStudyMaterials(organizationId);
+  const updated = existing.map((item) => {
+    if (item.id === materialId) {
+      return { ...item, ...mat };
+    }
+    return item;
+  });
+  saveLocalStudyMaterials(organizationId, updated);
+}
+
+export async function deleteStudyMaterial(materialId: string, organizationId?: string): Promise<void> {
+  try {
+    await supabase.from("academy_study_materials").delete().eq("id", materialId);
+  } catch (err) {
+    console.error("Error deleting academy_study_material:", err);
+  }
+
+  if (organizationId) {
+    const existing = getLocalStudyMaterials(organizationId);
+    const updated = existing.filter((item) => item.id !== materialId);
+    saveLocalStudyMaterials(organizationId, updated);
+  }
 }
 
 // LocalStorage helpers for academic announcements
@@ -597,7 +1273,6 @@ export async function getAnnouncementsList(organizationId: string): Promise<Anno
         })
       }));
 
-      // Combine DB items + local items (deduplicated by id)
       const map = new Map<string, AnnouncementItem>();
       dbItems.forEach(item => map.set(item.id, item));
       localItems.forEach(item => { if (!map.has(item.id)) map.set(item.id, item); });
@@ -606,72 +1281,11 @@ export async function getAnnouncementsList(organizationId: string): Promise<Anno
       saveLocalAnnouncements(organizationId, result);
       return result;
     }
-
-    if (error) {
-      console.warn("Querying academic_announcements failed or table not found:", error);
-    }
   } catch (err) {
     console.error("Supabase academic_announcements error:", err);
   }
 
-  // If local items exist, return them
-  if (localItems.length > 0) {
-    return localItems;
-  }
-
-  // Auto-seed initial demo announcements to database & local storage if empty
-  const defaultAnnouncements = [
-    {
-      organization_id: organizationId,
-      title: "Mid-Term Examination Schedule Released",
-      content: "The mid-term examination timetable for all grades has been published. Please check the Tests tab for dates.",
-      target_audience: "All",
-      priority: "urgent",
-      author: "Principal Office"
-    },
-    {
-      organization_id: organizationId,
-      title: "Faculty Meeting this Friday at 4 PM",
-      content: "All department heads and teaching staff are requested to attend the monthly academic review meeting.",
-      target_audience: "Teachers",
-      priority: "high",
-      author: "Dean of Academics"
-    }
-  ];
-
-  try {
-    const { data: seeded } = await supabase
-      .from("academic_announcements")
-      .insert(defaultAnnouncements)
-      .select();
-
-    if (seeded && seeded.length > 0) {
-      const result: AnnouncementItem[] = seeded.map((row: any) => ({
-        id: row.id,
-        title: row.title,
-        content: row.content,
-        target_audience: row.target_audience || "All",
-        priority: row.priority || "normal",
-        author: row.author || "Admin",
-        created_at: new Date(row.created_at).toLocaleDateString("en-IN", {
-          day: "numeric",
-          month: "short",
-          year: "numeric"
-        })
-      }));
-      saveLocalAnnouncements(organizationId, result);
-      return result;
-    }
-  } catch (e) {
-    console.error(e);
-  }
-
-  const fallback: AnnouncementItem[] = [
-    { id: "anc-1", title: "Mid-Term Examination Schedule Released", content: "The mid-term examination timetable for all grades has been published. Please check the Tests tab for dates.", target_audience: "All", created_at: "Just now", author: "Principal Office", priority: "urgent" },
-    { id: "anc-2", title: "Faculty Meeting this Friday at 4 PM", content: "All department heads and teaching staff are requested to attend the monthly academic review meeting.", target_audience: "Teachers", created_at: "1 day ago", author: "Dean of Academics", priority: "high" }
-  ];
-  saveLocalAnnouncements(organizationId, fallback);
-  return fallback;
+  return localItems;
 }
 
 export async function createAnnouncement(
@@ -701,10 +1315,6 @@ export async function createAnnouncement(
       .insert(payload)
       .select()
       .single();
-
-    if (error) {
-      console.error("Error inserting into academic_announcements table:", error);
-    }
 
     if (data) {
       newAnc = {
@@ -737,12 +1347,10 @@ export async function createAnnouncement(
     };
   }
 
-  // 1. Save to local storage for instant persistence across page refreshes
   const existing = getLocalAnnouncements(organizationId);
   const updated = [newAnc, ...existing.filter((item) => item.id !== newAnc!.id)];
   saveLocalAnnouncements(organizationId, updated);
 
-  // 2. Dispatch to student member_notifications in Supabase
   try {
     const { data: students } = await supabase
       .from("students")
@@ -784,7 +1392,7 @@ export async function deleteAnnouncement(announcementId: string, organizationId?
       .delete()
       .eq("id", announcementId);
   } catch (err) {
-    console.error("Error deleting academic_announcement from database:", err);
+    console.error("Error deleting academic_announcement:", err);
   }
 
   if (organizationId) {

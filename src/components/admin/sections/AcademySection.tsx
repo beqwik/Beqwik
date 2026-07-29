@@ -109,28 +109,8 @@ export default function AcademySection({ organizationId, members }: AcademySecti
     fetchAllAcademyData();
   }, [organizationId]);
 
-  // Combined Student List (Database students + prop members fallback)
-  const combinedStudentList = [
-    ...students,
-    ...members
-      .filter((m) =>
-        !students.some((s) => s.email === m.email || s.id === m.id) &&
-        !staffMembers.some((staff) => staff.email === m.email || staff.id === m.id) &&
-        m.role !== "staff" && m.role !== "teacher"
-      )
-      .map((m) => ({
-        id: m.id,
-        organization_id: organizationId,
-        student_code: m.member_code || `MEM-${m.id.substring(0, 5)}`,
-        full_name: m.full_name,
-        email: m.email,
-        phone: m.phone,
-        college_id: "",
-        room_number: "",
-        hostel_block: "",
-        role: "student"
-      }))
-  ];
+  // Student List from academy_students table
+  const combinedStudentList = students;
 
   /* =============================================================================
    * HANDLERS: CLASSES & ENROLLMENTS

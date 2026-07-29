@@ -1,7 +1,10 @@
 import { useState } from "react";
 import { loginMember } from "../../services/member/memberAuth";
+import { checkIsStaffMember } from "../../services/organization/academyService";
 import { useNavigate, Link } from "react-router-dom";
 import BeQwikLogo from "../../components/BeQwikLogo";
+import { sanitizeErrorMessage } from "../../utils/errorUtils";
+import { AlertTriangle, CheckCircle2 } from "lucide-react";
 
 export default function MemberLogin() {
   const navigate = useNavigate();
@@ -10,11 +13,13 @@ export default function MemberLogin() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
+  const [successMsg, setSuccessMsg] = useState("");
 
-  async function handleSubmit(
-    e: React.FormEvent
-  ) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    setErrorMsg("");
+    setSuccessMsg("");
 
     try {
       setLoading(true);
@@ -25,19 +30,29 @@ export default function MemberLogin() {
         password,
       });
 
-      console.log(result);
-
       if (result.success) {
-        alert("Login successful");
+        setSuccessMsg("Login successful! Redirecting...");
+        const org = result.organization;
+        const member = result.member;
 
-        // Existing backend flow remains untouched
-        navigate("/member/dashboard");
+        setTimeout(async () => {
+          if (org?.organization_type === "Academy") {
+            const isStaff = await checkIsStaffMember(org.id, member?.email);
+            if (isStaff) {
+              navigate("/staff/dashboard");
+            } else {
+              navigate("/student/dashboard");
+            }
+          } else {
+            navigate("/member/dashboard");
+          }
+        }, 300);
       } else {
-        alert(String(result.error));
+        setErrorMsg(sanitizeErrorMessage(result.error));
       }
     } catch (err) {
       console.error(err);
-      alert("Login failed");
+      setErrorMsg("Unable to sign in. Please verify your credentials and try again.");
     } finally {
       setLoading(false);
     }
@@ -52,12 +67,9 @@ export default function MemberLogin() {
       </div>
 
       <div className="relative z-10 w-full px-6 lg:px-12 xl:px-20">
-
         <div className="grid lg:grid-cols-2 gap-20 min-h-screen items-center">
-
           {/* LEFT SIDE */}
           <div className="hidden lg:block">
-
             <BeQwikLogo size={60} className="mb-10" />
 
             <div className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-slate-50 text-slate-600 text-xs font-semibold border border-slate-200/80 mb-8">
@@ -84,7 +96,6 @@ export default function MemberLogin() {
             </p>
 
             <div className="mt-12 flex gap-8">
-
               <div>
                 <h2 className="text-4xl font-bold text-slate-900">
                   500+
@@ -111,16 +122,12 @@ export default function MemberLogin() {
                   Uptime
                 </p>
               </div>
-
             </div>
-
           </div>
 
           {/* RIGHT SIDE */}
           <div className="flex justify-center">
-
             <div className="w-full max-w-lg bg-white rounded-2xl shadow-xl border border-slate-200 p-8">
-
               <div className="lg:hidden mb-6">
                 <BeQwikLogo size={60} />
               </div>
@@ -139,23 +146,43 @@ export default function MemberLogin() {
                 onSubmit={handleSubmit}
                 className="space-y-5"
               >
+                {/* UI Alert Error Banner */}
+                {errorMsg && (
+                  <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-[14px] text-rose-700 text-xs font-semibold flex items-center gap-2.5 animate-fadeIn">
+                    <AlertTriangle className="w-4 h-4 text-rose-500 shrink-0" />
+                    <span>{errorMsg}</span>
+                  </div>
+                )}
+
+                {/* UI Alert Success Banner */}
+                {successMsg && (
+                  <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-[14px] text-emerald-800 text-xs font-semibold flex items-center gap-2.5 animate-fadeIn">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span>{successMsg}</span>
+                  </div>
+                )}
 
                 <input
                   className="w-full h-14 px-5 rounded-xl border border-slate-200 outline-none transition-all duration-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
                   placeholder="Organization Code"
                   value={organizationCode}
-                  onChange={(e) =>
-                    setOrganizationCode(e.target.value)
-                  }
+                  onChange={(e) => {
+                    setOrganizationCode(e.target.value);
+                    setErrorMsg("");
+                  }}
+                  required
                 />
 
                 <input
+                  type="email"
                   className="w-full h-14 px-5 rounded-xl border border-slate-200 outline-none transition-all duration-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
                   placeholder="Email Address"
                   value={email}
-                  onChange={(e) =>
-                    setEmail(e.target.value)
-                  }
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    setErrorMsg("");
+                  }}
+                  required
                 />
 
                 <input
@@ -163,42 +190,36 @@ export default function MemberLogin() {
                   className="w-full h-14 px-5 rounded-xl border border-slate-200 outline-none transition-all duration-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10"
                   placeholder="Password"
                   value={password}
-                  onChange={(e) =>
-                    setPassword(e.target.value)
-                  }
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    setErrorMsg("");
+                  }}
+                  required
                 />
 
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full h-14 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-lg shadow-blue-500/20 hover:shadow-xl hover:shadow-blue-500/30 transition-all duration-300 hover:scale-[1.02] disabled:opacity-50 disabled:hover:scale-100"
+                  className="w-full h-14 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-lg shadow-blue-500/20 hover:shadow-xl hover:shadow-blue-500/30 transition-all duration-300 hover:scale-[1.02] disabled:opacity-50 disabled:hover:scale-100 cursor-pointer"
                 >
                   {loading
-                    ? "Logging in..."
+                    ? "Signing in..."
                     : "Sign In"}
                 </button>
-
               </form>
 
               <div className="mt-6 text-center text-slate-500">
-
                 Don't have an account?{" "}
-
                 <Link
                   to="/member/register"
                   className="font-semibold text-blue-600 hover:text-blue-700 transition"
                 >
                   Create Account
                 </Link>
-
               </div>
-
             </div>
-
           </div>
-
         </div>
-
       </div>
     </div>
   );

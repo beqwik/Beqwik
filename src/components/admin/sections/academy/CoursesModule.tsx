@@ -1,4 +1,4 @@
-import { BookOpen, Plus, Clock, MapPin, Trash2 } from "lucide-react";
+import { BookOpen, Plus, Clock, Calendar, Trash2, ShieldCheck } from "lucide-react";
 import type { AcademyClass } from "../../../../services/organization/academyService";
 
 interface CoursesModuleProps {
@@ -20,7 +20,7 @@ export default function CoursesModule({ classes, registrations, onAddClass, onDe
         </div>
         <button
           onClick={onAddClass}
-          className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-[14px] text-xs font-bold transition flex items-center gap-2"
+          className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-[14px] text-xs font-bold transition flex items-center gap-2 shadow-sm cursor-pointer"
         >
           <Plus className="w-4 h-4" /> Create Course
         </button>
@@ -34,10 +34,10 @@ export default function CoursesModule({ classes, registrations, onAddClass, onDe
           return (
             <div key={cls.id} className="bg-slate-50/60 rounded-[16px] border border-slate-200/60 p-5 space-y-4">
               <div className="flex justify-between items-start">
-                <span className="px-2.5 py-1 rounded-full bg-blue-100 text-blue-700 font-extrabold text-[10px]">
-                  {cls.dayOfWeek}
+                <span className="px-2.5 py-1 rounded-full bg-blue-100 text-blue-800 font-extrabold text-[10px] uppercase tracking-wide">
+                  Duration: {cls.courseDuration || "6 Months"}
                 </span>
-                <button onClick={() => onDeleteClass(cls.id)} className="text-slate-400 hover:text-rose-500">
+                <button onClick={() => onDeleteClass(cls.id)} className="text-slate-400 hover:text-rose-500 transition cursor-pointer">
                   <Trash2 className="w-4 h-4" />
                 </button>
               </div>
@@ -57,9 +57,14 @@ export default function CoursesModule({ classes, registrations, onAddClass, onDe
                 </div>
               </div>
 
-              <div className="flex items-center justify-between text-xs text-slate-400 pt-2 border-t border-slate-200/60">
-                <span className="flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> {cls.timing}</span>
-                <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5" /> {cls.room}</span>
+              <div className="flex flex-col gap-1 text-xs text-slate-500 pt-2 border-t border-slate-200/60">
+                <div className="flex items-center justify-between">
+                  <span className="flex items-center gap-1 font-semibold"><Clock className="w-3.5 h-3.5 text-slate-400" /> Timing: {cls.timing}</span>
+                </div>
+                <div className="flex items-center gap-1 text-[11px] font-bold text-slate-600 mt-1">
+                  <Calendar className="w-3.5 h-3.5 text-indigo-500" />
+                  <span>{cls.startDate || "2026-08-01"} to {cls.endDate || "2027-02-01"}</span>
+                </div>
               </div>
             </div>
           );

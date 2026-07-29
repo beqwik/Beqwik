@@ -1,18 +1,38 @@
+import { useState, useEffect } from "react";
 import { Outlet, NavLink, useNavigate } from "react-router-dom";
 import { logoutMember, getCurrentMember, getCurrentOrganization } from "../../services/member/memberAuth";
+import { checkIsStaffMember } from "../../services/organization/academyService";
 import BeQwikLogo from "../../components/BeQwikLogo";
-
-const navItems = [
-  { to: "/member/dashboard", icon: "🏠", label: "Dashboard" },
-  { to: "/member/subscription", icon: "💳", label: "Subscription" },
-  { to: "/member/notifications", icon: "🔔", label: "Notifications" },
-  { to: "/member/profile", icon: "👤", label: "Profile" },
-];
 
 export default function MemberLayout() {
   const navigate = useNavigate();
   const member = getCurrentMember();
   const org = getCurrentOrganization();
+
+  const [isStaff, setIsStaff] = useState<boolean>(() => {
+    const role = member?.role?.toLowerCase() || "";
+    const email = member?.email?.toLowerCase() || "";
+    const name = member?.full_name?.toLowerCase() || "";
+    return (
+      role === "staff" ||
+      role === "teacher" ||
+      Boolean(member?.designation) ||
+      email.includes("staff") ||
+      email.includes("teacher") ||
+      name.includes("staff") ||
+      name.includes("teacher")
+    );
+  });
+
+  useEffect(() => {
+    async function verifyStaff() {
+      if (org?.id && member?.email) {
+        const verified = await checkIsStaffMember(org.id, member.email);
+        if (verified) setIsStaff(true);
+      }
+    }
+    verifyStaff();
+  }, [org?.id, member?.email]);
 
   const handleLogout = () => {
     logoutMember();
@@ -23,32 +43,56 @@ export default function MemberLayout() {
     ? member.full_name.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2)
     : "M";
 
+  const isAcademy = org?.organization_type === "Academy";
+
+  const navItems = isAcademy
+    ? isStaff
+      ? [
+          { to: "/member/dashboard", icon: "📊", label: "Faculty Dashboard" },
+          { to: "/member/courses", icon: "📚", label: "Academy Courses" },
+          { to: "/member/notifications", icon: "🔔", label: "Notices & Alerts" },
+          { to: "/member/profile", icon: "👤", label: "Profile" },
+        ]
+      : [
+          { to: "/member/dashboard", icon: "📚", label: "Dashboard" },
+          { to: "/member/courses", icon: "🔍", label: "Explore Courses" },
+          { to: "/member/my-courses", icon: "🎓", label: "My Courses" },
+          { to: "/member/notifications", icon: "🔔", label: "Notifications" },
+          { to: "/member/profile", icon: "👤", label: "Profile" },
+        ]
+    : [
+        { to: "/member/dashboard", icon: "🏠", label: "Dashboard" },
+        { to: "/member/subscription", icon: "💳", label: "Subscription" },
+        { to: "/member/notifications", icon: "🔔", label: "Notifications" },
+        { to: "/member/profile", icon: "👤", label: "Profile" },
+      ];
+
   return (
     <div className="flex min-h-screen bg-slate-50">
-
       {/* SIDEBAR */}
       <aside className="w-64 bg-white border-r border-slate-200 flex flex-col fixed h-screen z-40">
-
         {/* LOGO */}
         <div className="px-6 py-5 border-b border-slate-100">
           <BeQwikLogo size={42} />
           <p className="text-[10px] text-slate-400 mt-2 truncate font-semibold">
-            {org?.name || "Member Portal"}
+            {org?.name || (isStaff ? "Faculty Portal" : "Student Portal")}
           </p>
         </div>
 
-        {/* MEMBER CARD */}
+        {/* MEMBER / STUDENT / STAFF CARD */}
         <div className="px-4 py-4 border-b border-slate-100">
-          <div className="flex items-center gap-3 bg-blue-50 rounded-xl px-3 py-3 border border-blue-100">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-blue-600 to-emerald-500 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+          <div className="flex items-center gap-3 bg-indigo-50/70 rounded-xl px-3 py-3 border border-indigo-100">
+            <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-indigo-600 to-purple-600 flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
               {initials}
             </div>
             <div className="min-w-0">
-              <p className="font-semibold text-slate-900 text-sm truncate">
-                {member?.full_name || "Member"}
-              </p>
-              <p className="text-xs text-slate-500 truncate">
-                {member?.email || ""}
+              <div className="flex items-center gap-1">
+                <p className="font-semibold text-slate-900 text-sm truncate">
+                  {member?.full_name || (isStaff ? "Faculty Member" : "Student")}
+                </p>
+              </div>
+              <p className="text-xs text-indigo-600 font-bold truncate">
+                {isStaff ? (member?.designation || "Teacher / Staff") : (member?.email || "")}
               </p>
             </div>
           </div>
@@ -61,9 +105,10 @@ export default function MemberLayout() {
               key={item.to}
               to={item.to}
               className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-semibold transition-all ${isActive
-                  ? "bg-blue-50 text-blue-600"
-                  : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                `flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-semibold transition-all ${
+                  isActive
+                    ? "bg-indigo-50 text-indigo-600 font-bold"
+                    : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
                 }`
               }
             >
@@ -95,11 +140,11 @@ export default function MemberLayout() {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center text-blue-600 font-bold text-xs border border-blue-100">
+            <div className="w-8 h-8 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600 font-bold text-xs border border-indigo-100">
               {initials}
             </div>
             <span className="text-sm font-medium text-slate-700 hidden sm:block">
-              {member?.full_name?.split(" ")[0] || "Member"}
+              {member?.full_name?.split(" ")[0] || (isStaff ? "Teacher" : "Student")}
             </span>
           </div>
         </header>

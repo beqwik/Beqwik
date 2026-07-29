@@ -113,18 +113,13 @@ function CreateOrganization() {
         return;
       }
 
-      /**
-       * Refresh organization hook
-       * so the entire app knows
-       * organization now exists.
-       */
       await reloadOrganization();
 
       alert(
-        `Organization created successfully.\nOrganization Code: ${organization.organization_code}`
+        `Organization created successfully!\nOrganization Code: ${organization.organization_code}`
       );
 
-      navigate("/select-plan", {
+      navigate("/onboarding/select-plan", {
         replace: true,
       });
     } catch (err) {
