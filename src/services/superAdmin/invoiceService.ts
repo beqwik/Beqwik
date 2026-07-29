@@ -10,8 +10,13 @@ export async function getInvoices() {
       paid_at,
       transaction_id,
       organizations (
-        organization_name
+        organization_name,
+         organization_subscriptions (
+      subscription_plans (
+        name
       )
+    )
+    )
     `)
     .order("paid_at", {
       ascending: false,

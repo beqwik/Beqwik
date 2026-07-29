@@ -172,10 +172,8 @@ PAID
                 title="Payment ID"
                 value={invoice.transaction_id}
               />
-<Detail
-    title="Transaction ID"
-    value={invoice.transaction_id}
-/>
+
+
             </div>
 
           </div>
