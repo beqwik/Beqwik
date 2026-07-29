@@ -60,13 +60,21 @@ CREATE POLICY "Allow public read gym_members" ON public.gym_members
     USING (true);
 
 -- =====================================================
--- DROP FK CONSTRAINT ON member_credentials.member_id
+-- DROP FK CONSTRAINTS ON member_id
 -- This allows member_id to reference either members.id
 -- (non-gym orgs) or gym_members.id (gym orgs).
--- Resolution is performed by checking org type at runtime.
 -- =====================================================
 ALTER TABLE public.member_credentials
     DROP CONSTRAINT IF EXISTS member_credentials_member_id_fkey;
+
+ALTER TABLE public.gym_slot_bookings
+    DROP CONSTRAINT IF EXISTS gym_slot_bookings_member_id_fkey;
+
+ALTER TABLE public.trainer_sessions
+    DROP CONSTRAINT IF EXISTS trainer_sessions_member_id_fkey;
+
+ALTER TABLE public.payments
+    DROP CONSTRAINT IF EXISTS payments_member_id_fkey;
 
 -- =====================================================
 -- UPDATED_AT TRIGGER
