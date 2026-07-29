@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import useOrganization from "../../hooks/useOrganization";
 import usePlanAccess from "../../hooks/usePlanAccess";
@@ -68,11 +69,23 @@ export default function Sidebar() {
   const { organization, loading } = useOrganization();
   const { hasAccess, loading: accessLoading } = usePlanAccess();
 
+  const [copied, setCopied] = useState(false);
+
   const orgName = organization?.organization_name || "EduLMS Platform";
   const orgCode = organization?.organization_code || "HOC002";
   const dynamicNavItems = getNavItemsForType(
     organization?.organization_type || "Academy"
   );
+
+  const handleCopyCode = () => {
+    try {
+      navigator.clipboard.writeText(orgCode);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   return (
     <aside className="w-[260px] bg-white text-slate-700 flex flex-col fixed h-screen z-40 border-r border-slate-100/90 shadow-sm">
@@ -98,13 +111,12 @@ export default function Sidebar() {
                 {orgCode}
               </span>
               <button
-                onClick={() => {
-                  navigator.clipboard.writeText(orgCode);
-                  alert("Organization code copied to clipboard!");
-                }}
-                className="text-[10px] text-indigo-600 hover:text-indigo-800 transition font-extrabold"
+                onClick={handleCopyCode}
+                className={`text-[10px] transition font-extrabold flex items-center gap-1 cursor-pointer ${
+                  copied ? "text-emerald-600 font-black" : "text-indigo-600 hover:text-indigo-800"
+                }`}
               >
-                Copy
+                {copied ? "Copied! ✓" : "Copy"}
               </button>
             </div>
           </div>

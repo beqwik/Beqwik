@@ -15,6 +15,8 @@ import NotificationTab from "../../components/admin/dashboard/NotificationTab";
 import SettingsTab from "../../components/admin/dashboard/SettingsTab";
 import AddMemberModal from "../../components/admin/dashboard/modals/AddMemberModal";
 import GrantSubscriptionModal from "../../components/admin/dashboard/modals/GrantSubscriptionModal";
+import BulkUploadStudentsModal from "../../components/admin/sections/academy/modals/BulkUploadStudentsModal";
+import BulkUploadStaffModal from "../../components/admin/sections/academy/modals/BulkUploadStaffModal";
 
 // Import 14 EduLMS Modules
 import OverviewModule from "../../components/admin/sections/academy/OverviewModule";
@@ -107,6 +109,8 @@ export default function AdminDashboard() {
   const [newMemberPassword, setNewMemberPassword] = useState("");
   const [newMemberRole, setNewMemberRole] = useState<"student" | "staff">("student");
   const [addingMember, setAddingMember] = useState(false);
+  const [showBulkUploadStudents, setShowBulkUploadStudents] = useState(false);
+  const [showBulkUploadStaff, setShowBulkUploadStaff] = useState(false);
 
   const [showAddSub, setShowAddSub] = useState(false);
   const [subMemberId, setSubMemberId] = useState("");
@@ -228,6 +232,33 @@ export default function AdminDashboard() {
       month: "short",
       year: "numeric",
     });
+  };
+
+  const handleCreateCourseSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!organization?.id || !courseName.trim()) return;
+
+    try {
+      const newClassData = {
+        className: courseName.trim(),
+        instructorName: courseInstructor.trim() || "Faculty Instructor",
+        timing: courseTiming || "09:00 - 10:30 AM",
+        maxCapacity: parseInt(courseMaxCap, 10) || 30,
+        courseDuration: courseDuration || "6 Months",
+        startDate: courseStartDate,
+        endDate: courseEndDate,
+      };
+
+      const created = await createAcademyClass(organization.id, newClassData);
+      setClasses((prev) => [created, ...prev]);
+
+      setCourseName("");
+      setCourseInstructor("");
+      setShowAddCourseModal(false);
+    } catch (err: any) {
+      console.error("Error creating course:", err);
+      alert("Failed to create course. Please try again.");
+    }
   };
 
   // Handlers
@@ -403,25 +434,6 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleCreateCourseSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!courseName || !organization) return;
-
-    const newCourse = await createAcademyClass(organization.id, {
-      className: courseName,
-      instructorName: courseInstructor || "Faculty Member",
-      timing: courseTiming || "09:00 - 10:30 AM",
-      maxCapacity: parseInt(courseMaxCap) || 30,
-      courseDuration: courseDuration || "6 Months",
-      startDate: courseStartDate || "2026-08-01",
-      endDate: courseEndDate || "2027-02-01"
-    });
-
-    setClasses(prev => [...prev, newCourse]);
-    setShowAddCourseModal(false);
-    setCourseName("");
-  };
-
   // Filter members
   const filteredMembers = members.filter(
     (m) =>
@@ -473,6 +485,7 @@ export default function AdminDashboard() {
                 await deleteStudent(id);
                 setStudents(prev => prev.filter(s => s.id !== id));
               }}
+              onUploadStudentsList={() => setShowBulkUploadStudents(true)}
             />
           )}
 
@@ -487,6 +500,7 @@ export default function AdminDashboard() {
                 await deleteStaffMember(id);
                 setTeachers(prev => prev.filter(t => t.id !== id));
               }}
+              onUploadTeachersList={() => setShowBulkUploadStaff(true)}
             />
           )}
 
@@ -871,6 +885,28 @@ export default function AdminDashboard() {
             </form>
           </div>
         </div>
+      )}
+
+      {/* Bulk Upload Modals for Students & Staff */}
+      {organization?.id && (
+        <>
+          <BulkUploadStudentsModal
+            isOpen={showBulkUploadStudents}
+            onClose={() => setShowBulkUploadStudents(false)}
+            organizationId={organization.id}
+            onSuccess={(newStudents) => {
+              setStudents((prev) => [...newStudents, ...prev]);
+            }}
+          />
+          <BulkUploadStaffModal
+            isOpen={showBulkUploadStaff}
+            onClose={() => setShowBulkUploadStaff(false)}
+            organizationId={organization.id}
+            onSuccess={(newStaff) => {
+              setTeachers((prev) => [...newStaff, ...prev]);
+            }}
+          />
+        </>
       )}
     </div>
   );

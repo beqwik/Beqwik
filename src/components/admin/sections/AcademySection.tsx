@@ -11,8 +11,11 @@ import {
   UserPlus,
   Mail,
   Phone,
-  Search
+  Search,
+  FileSpreadsheet
 } from "lucide-react";
+import BulkUploadStudentsModal from "./academy/modals/BulkUploadStudentsModal";
+import BulkUploadStaffModal from "./academy/modals/BulkUploadStaffModal";
 import {
   getAcademyClasses,
   createAcademyClass,
@@ -36,7 +39,7 @@ interface AcademySectionProps {
   members: any[];
 }
 
-export default function AcademySection({ organizationId, members }: AcademySectionProps) {
+export default function AcademySection({ organizationId, members: _members }: AcademySectionProps) {
   // Navigation tab state
   const [activeTab, setActiveTab] = useState<"classes" | "students" | "staff">("classes");
 
@@ -55,6 +58,8 @@ export default function AcademySection({ organizationId, members }: AcademySecti
   const [showAddClass, setShowAddClass] = useState(false);
   const [showAddStudent, setShowAddStudent] = useState(false);
   const [showAddStaff, setShowAddStaff] = useState(false);
+  const [showBulkUploadStudents, setShowBulkUploadStudents] = useState(false);
+  const [showBulkUploadStaff, setShowBulkUploadStaff] = useState(false);
 
   // Form states: Create Class
   const [className, setClassName] = useState("");
@@ -472,12 +477,20 @@ export default function AcademySection({ organizationId, members }: AcademySecti
               />
             </div>
 
-            <button
-              onClick={() => setShowAddStudent(true)}
-              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-semibold transition flex items-center gap-2"
-            >
-              <UserPlus className="w-4 h-4" /> Add Student
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowBulkUploadStudents(true)}
+                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-semibold transition flex items-center gap-2 shadow-sm"
+              >
+                <FileSpreadsheet className="w-4 h-4" /> Upload List (CSV/Excel)
+              </button>
+              <button
+                onClick={() => setShowAddStudent(true)}
+                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-semibold transition flex items-center gap-2"
+              >
+                <UserPlus className="w-4 h-4" /> Add Student
+              </button>
+            </div>
           </div>
 
           <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
@@ -558,18 +571,27 @@ export default function AcademySection({ organizationId, members }: AcademySecti
         <div className="space-y-6">
           <div className="flex justify-between items-center gap-4 flex-wrap">
             <h3 className="font-bold text-slate-800 text-lg">Academic Staff & Instructors</h3>
-            <button
-              onClick={() => setShowAddStaff(true)}
-              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-semibold transition flex items-center gap-2"
-            >
-              <UserPlus className="w-4 h-4" /> Add Staff / Teacher
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowBulkUploadStaff(true)}
+                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-semibold transition flex items-center gap-2 shadow-sm"
+              >
+                <FileSpreadsheet className="w-4 h-4" /> Upload Staff List (CSV/Excel)
+              </button>
+              <button
+                onClick={() => setShowAddStaff(true)}
+                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-semibold transition flex items-center gap-2"
+              >
+                <UserPlus className="w-4 h-4" /> Add Staff / Teacher
+              </button>
+            </div>
           </div>
 
           <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
             <table className="w-full text-left text-sm text-slate-700">
               <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase text-xs font-semibold">
                 <tr>
+                  <th className="px-6 py-4">Staff ID</th>
                   <th className="px-6 py-4">Full Name</th>
                   <th className="px-6 py-4">Designation</th>
                   <th className="px-6 py-4">Contact</th>
@@ -580,6 +602,9 @@ export default function AcademySection({ organizationId, members }: AcademySecti
               <tbody className="divide-y divide-slate-100">
                 {staffMembers.map((stf) => (
                   <tr key={stf.id} className="hover:bg-slate-50/60 transition">
+                    <td className="px-6 py-4 font-mono font-bold text-xs text-purple-600">
+                      {stf.staff_code || `STF-${stf.id.substring(0, 5)}`}
+                    </td>
                     <td className="px-6 py-4 font-bold text-slate-900">
                       {stf.full_name}
                     </td>
@@ -1009,6 +1034,27 @@ export default function AcademySection({ organizationId, members }: AcademySecti
           </div>
         </div>
       )}
+
+      {/* =========================================================================
+       * BULK UPLOAD MODALS: STUDENTS & STAFF
+       * ========================================================================= */}
+      <BulkUploadStudentsModal
+        isOpen={showBulkUploadStudents}
+        onClose={() => setShowBulkUploadStudents(false)}
+        organizationId={organizationId}
+        onSuccess={(newStudents) => {
+          setStudents((prev) => [...newStudents, ...prev]);
+        }}
+      />
+
+      <BulkUploadStaffModal
+        isOpen={showBulkUploadStaff}
+        onClose={() => setShowBulkUploadStaff(false)}
+        organizationId={organizationId}
+        onSuccess={(newStaff) => {
+          setStaffMembers((prev) => [...newStaff, ...prev]);
+        }}
+      />
     </div>
   );
 }

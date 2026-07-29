@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Outlet, NavLink, useNavigate } from "react-router-dom";
 import { logoutMember, getCurrentMember, getCurrentOrganization } from "../../services/member/memberAuth";
-import { checkIsStaffMember } from "../../services/organization/academyService";
+import { checkIsStaffMember, checkIsAcademyOrg } from "../../services/organization/academyService";
 import BeQwikLogo from "../../components/BeQwikLogo";
 
 export default function MemberLayout() {
@@ -24,15 +24,22 @@ export default function MemberLayout() {
     );
   });
 
+  const [isAcademy, setIsAcademy] = useState<boolean>(() => {
+    return org?.organization_type === "Academy" || isStaff;
+  });
+
   useEffect(() => {
-    async function verifyStaff() {
-      if (org?.id && member?.email) {
-        const verified = await checkIsStaffMember(org.id, member.email);
-        if (verified) setIsStaff(true);
+    async function verifyAcademyAndStaff() {
+      if (org?.id || member?.email) {
+        const verifiedStaff = await checkIsStaffMember(org?.id || "", member?.email || "");
+        if (verifiedStaff) setIsStaff(true);
+
+        const verifiedAcademy = await checkIsAcademyOrg(org?.id || org?.organization_code || "", member?.email || "");
+        if (verifiedAcademy || verifiedStaff) setIsAcademy(true);
       }
     }
-    verifyStaff();
-  }, [org?.id, member?.email]);
+    verifyAcademyAndStaff();
+  }, [org?.id, org?.organization_code, member?.email]);
 
   const handleLogout = () => {
     logoutMember();
@@ -43,22 +50,20 @@ export default function MemberLayout() {
     ? member.full_name.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2)
     : "M";
 
-  const isAcademy = org?.organization_type === "Academy";
-
   const navItems = isAcademy
     ? isStaff
       ? [
-          { to: "/member/dashboard", icon: "📊", label: "Faculty Dashboard" },
-          { to: "/member/courses", icon: "📚", label: "Academy Courses" },
-          { to: "/member/notifications", icon: "🔔", label: "Notices & Alerts" },
-          { to: "/member/profile", icon: "👤", label: "Profile" },
+          { to: "/staff/dashboard", icon: "📊", label: "Faculty Dashboard" },
+          { to: "/staff/lecture-schedule", icon: "📅", label: "Lecture Schedule" },
+          { to: "/staff/notifications", icon: "🔔", label: "Notices & Alerts" },
+          { to: "/staff/profile", icon: "👤", label: "Profile" },
         ]
       : [
-          { to: "/member/dashboard", icon: "📚", label: "Dashboard" },
-          { to: "/member/courses", icon: "🔍", label: "Explore Courses" },
-          { to: "/member/my-courses", icon: "🎓", label: "My Courses" },
-          { to: "/member/notifications", icon: "🔔", label: "Notifications" },
-          { to: "/member/profile", icon: "👤", label: "Profile" },
+          { to: "/student/dashboard", icon: "📚", label: "Dashboard" },
+          { to: "/student/courses", icon: "🔍", label: "Explore Courses" },
+          { to: "/student/my-courses", icon: "🎓", label: "My Courses" },
+          { to: "/student/notifications", icon: "🔔", label: "Notifications" },
+          { to: "/student/profile", icon: "👤", label: "Profile" },
         ]
     : [
         { to: "/member/dashboard", icon: "🏠", label: "Dashboard" },

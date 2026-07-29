@@ -1,35 +1,46 @@
-import { Users, UserPlus, Mail, Phone, Trash2 } from "lucide-react";
+import { Users, UserPlus, Mail, Phone, Trash2, FileSpreadsheet } from "lucide-react";
 import type { Student } from "../../../../services/organization/academyService";
 
 interface StudentsModuleProps {
   students: Student[];
   onAddStudent: () => void;
   onDeleteStudent: (id: string) => void;
+  onUploadStudentsList?: () => void;
 }
 
-export default function StudentsModule({ students, onAddStudent, onDeleteStudent }: StudentsModuleProps) {
+export default function StudentsModule({ students, onAddStudent, onDeleteStudent, onUploadStudentsList }: StudentsModuleProps) {
   return (
     <div className="bg-white rounded-[20px] border border-slate-100 p-6 shadow-sm space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center flex-wrap gap-3">
         <div>
           <h2 className="text-xl font-black text-slate-900 flex items-center gap-2">
             <Users className="w-5 h-5 text-rose-500" /> Student Roster
           </h2>
           <p className="text-slate-500 text-xs font-medium">Manage student registrations</p>
         </div>
-        <button
-          onClick={onAddStudent}
-          className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-[14px] text-xs font-bold transition flex items-center gap-2"
-        >
-          <UserPlus className="w-4 h-4" /> Add Student
-        </button>
+        <div className="flex items-center gap-2">
+          {onUploadStudentsList && (
+            <button
+              onClick={onUploadStudentsList}
+              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-[14px] text-xs font-bold transition flex items-center gap-2 shadow-sm"
+            >
+              <FileSpreadsheet className="w-4 h-4" /> Upload List (CSV/Excel)
+            </button>
+          )}
+          <button
+            onClick={onAddStudent}
+            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-[14px] text-xs font-bold transition flex items-center gap-2"
+          >
+            <UserPlus className="w-4 h-4" /> Add Student
+          </button>
+        </div>
       </div>
 
       <div className="overflow-x-auto">
         <table className="w-full text-left text-xs text-slate-700">
           <thead className="bg-slate-50 border-b border-slate-100 text-slate-400 font-bold uppercase">
             <tr>
-              <th className="px-4 py-3">Code</th>
+              <th className="px-4 py-3">Student ID</th>
               <th className="px-4 py-3">Student Name</th>
               <th className="px-4 py-3">Contact</th>
               <th className="px-4 py-3">Role</th>

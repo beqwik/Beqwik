@@ -19,16 +19,16 @@ export default function ExploreCourses() {
   const [searchQuery, setSearchQuery] = useState("");
   const [processingId, setProcessingId] = useState<string | null>(null);
 
-  const studentId = member?.id || "";
+  const studentId = member?.student_code || member?.id || member?.email || "STU-1001";
+  const orgId = org?.id || member?.organization_id || "HOC002";
 
   useEffect(() => {
     async function loadData() {
-      if (!org?.id) { setLoading(false); return; }
       try {
         setLoading(true);
         const [fetchedClasses, fetchedRegs] = await Promise.all([
-          getAcademyClasses(org.id),
-          getClassRegistrations(org.id)
+          getAcademyClasses(orgId),
+          getClassRegistrations(orgId)
         ]);
         setClasses(fetchedClasses);
         setRegistrations(fetchedRegs);
@@ -39,32 +39,44 @@ export default function ExploreCourses() {
       }
     }
     loadData();
-  }, [org?.id]);
+  }, [orgId]);
 
   const handleEnrollToggle = async (classId: string) => {
-    if (!org?.id || !studentId) return;
+    if (!studentId) return;
 
     const classRegs = registrations[classId] || [];
-    const isEnrolled = classRegs.includes(studentId);
+    const isEnrolled =
+      classRegs.includes(studentId) ||
+      Boolean(member?.id && classRegs.includes(member.id)) ||
+      Boolean(member?.student_code && classRegs.includes(member.student_code)) ||
+      Boolean(member?.email && classRegs.includes(member.email));
 
     try {
       setProcessingId(classId);
       if (isEnrolled) {
-        await unenrollStudentFromClass(classId, studentId);
-        setRegistrations(prev => ({
+        await unenrollStudentFromClass(classId, studentId, orgId);
+        if (member?.id && member.id !== studentId) {
+          await unenrollStudentFromClass(classId, member.id, orgId);
+        }
+        if (member?.email && member.email !== studentId) {
+          await unenrollStudentFromClass(classId, member.email, orgId);
+        }
+        setRegistrations((prev) => ({
           ...prev,
-          [classId]: (prev[classId] || []).filter(id => id !== studentId)
+          [classId]: (prev[classId] || []).filter(
+            (id) => id !== studentId && id !== member?.id && id !== member?.email
+          )
         }));
       } else {
-        const cls = classes.find(c => c.id === classId);
+        const cls = classes.find((c) => c.id === classId);
         if (cls && classRegs.length >= cls.maxCapacity) {
           alert("This course is already at full capacity.");
           return;
         }
-        await enrollStudentInClass(org.id, classId, studentId);
-        setRegistrations(prev => ({
+        await enrollStudentInClass(orgId, classId, studentId);
+        setRegistrations((prev) => ({
           ...prev,
-          [classId]: [...(prev[classId] || []), studentId]
+          [classId]: Array.from(new Set([...(prev[classId] || []), studentId]))
         }));
       }
     } catch (err) {
@@ -79,7 +91,7 @@ export default function ExploreCourses() {
     cls =>
       cls.className.toLowerCase().includes(searchQuery.toLowerCase()) ||
       cls.instructorName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      cls.room.toLowerCase().includes(searchQuery.toLowerCase())
+      (cls.room || "").toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (
@@ -129,7 +141,11 @@ export default function ExploreCourses() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredClasses.map((cls) => {
             const classRegs = registrations[cls.id] || [];
-            const isEnrolled = classRegs.includes(studentId);
+            const isEnrolled =
+              classRegs.includes(studentId) ||
+              Boolean(member?.id && classRegs.includes(member.id)) ||
+              Boolean(member?.student_code && classRegs.includes(member.student_code)) ||
+              Boolean(member?.email && classRegs.includes(member.email));
             const enrolledCount = classRegs.length;
             const vacancy = cls.maxCapacity - enrolledCount;
             const isFull = vacancy <= 0;

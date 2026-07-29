@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { Link } from "react-router-dom";
+import { supabase } from "../../services/supabase";
 import { getCurrentMember, getCurrentOrganization } from "../../services/member/memberAuth";
 import { getActiveSubscription } from "../../services/member/memberSubscriptionService";
 import { getUnreadCount } from "../../services/member/memberNotificationService";
@@ -87,9 +88,11 @@ export default function MemberDashboard() {
   const [testResults, setTestResults] = useState<TestResultItem[]>([]);
   const [studyMaterials, setStudyMaterials] = useState<StudyMaterialItem[]>([]);
   const [announcements, setAnnouncements] = useState<AnnouncementItem[]>([]);
+  const [studentRecord, setStudentRecord] = useState<any>(null);
+  const [staffRecord, setStaffRecord] = useState<any>(null);
 
   // Modals for Staff Dashboard
-  const [activeModal, setActiveModal] = useState<"assignment" | "result" | "material" | "notice" | null>(null);
+  const [activeModal, setActiveModal] = useState<"assignment" | "result" | "material" | "notice" | "announcement" | null>(null);
   const [editingItem, setEditingItem] = useState<any>(null);
 
   // Daily Goals State (persisted per day per member)
@@ -165,7 +168,7 @@ export default function MemberDashboard() {
   // Fetch Academy Data (Classes, Assignments, Results, Materials)
   useEffect(() => {
     async function fetchAcademyData() {
-      if (!org?.id || org?.organization_type !== "Academy") return;
+      if (!org?.id) return;
       try {
         const [classes, regs, asgs, res, mats, notices] = await Promise.all([
           getAcademyClasses(org.id),
@@ -204,13 +207,33 @@ export default function MemberDashboard() {
   });
 
   useEffect(() => {
-    async function verifyStaff() {
+    async function verifyStaffAndFetchRecords() {
       if (org?.id && member?.email) {
         const verified = await checkIsStaffMember(org.id, member.email);
         if (verified) setIsStaff(true);
+
+        // Fetch student record if student
+        const { data: stdData } = await supabase
+          .from("academy_students")
+          .select("*")
+          .eq("organization_id", org.id)
+          .ilike("email", member.email.trim())
+          .maybeSingle();
+
+        if (stdData) setStudentRecord(stdData);
+
+        // Fetch staff record if staff
+        const { data: stfData } = await supabase
+          .from("academy_staff")
+          .select("*")
+          .eq("organization_id", org.id)
+          .ilike("email", member.email.trim())
+          .maybeSingle();
+
+        if (stfData) setStaffRecord(stfData);
       }
     }
-    verifyStaff();
+    verifyStaffAndFetchRecords();
   }, [org?.id, member?.email]);
   const daysLeft = subscription?.end_date ? getDaysRemaining(subscription.end_date) : null;
   const planName = subscription?.subscription_plans?.name || subscription?.plan_name || null;
@@ -261,9 +284,16 @@ export default function MemberDashboard() {
         {/* Welcome Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
-            <h1 className="text-3xl font-black text-slate-900 tracking-tight flex items-center gap-2">
-              {greeting}, {firstName} 👨‍🏫
-            </h1>
+            <div className="flex items-center gap-3 flex-wrap">
+              <h1 className="text-3xl font-black text-slate-900 tracking-tight flex items-center gap-2">
+                {greeting}, {firstName} 👨‍🏫
+              </h1>
+              {(staffRecord?.staff_code || member?.staff_code) && (
+                <span className="px-3 py-1 bg-purple-100 text-purple-800 border border-purple-200 font-mono font-bold text-xs rounded-full shadow-sm">
+                  Staff ID: {staffRecord?.staff_code || member?.staff_code}
+                </span>
+              )}
+            </div>
             <p className="text-slate-500 font-medium mt-1">
               Faculty & Teaching Staff Dashboard at <span className="font-bold text-indigo-600">{org?.name || "the Academy"}</span>.
             </p>
@@ -289,6 +319,13 @@ export default function MemberDashboard() {
               className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-[14px] text-xs font-extrabold transition flex items-center gap-2 shadow-md cursor-pointer"
             >
               <Plus className="w-4 h-4" /> Add Notes
+            </button>
+
+            <button
+              onClick={() => { setEditingItem(null); setActiveModal("announcement"); }}
+              className="px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:opacity-95 text-white rounded-[14px] text-xs font-extrabold transition flex items-center gap-2 shadow-md shadow-blue-500/20 cursor-pointer"
+            >
+              <Megaphone className="w-4 h-4" /> Post Announcement
             </button>
           </div>
         </div>
@@ -469,6 +506,44 @@ export default function MemberDashboard() {
           )}
         </div>
 
+        {/* Section 3: Notice Board & Announcements */}
+        <div className="bg-white rounded-[20px] border border-slate-150 p-6 shadow-sm space-y-4">
+          <div className="flex justify-between items-center">
+            <div>
+              <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
+                <Megaphone className="w-5 h-5 text-indigo-600" /> Notice Board & Announcements
+              </h3>
+              <p className="text-slate-500 text-xs font-medium">Broadcast notices and announcements to students and teachers</p>
+            </div>
+            <button
+              onClick={() => { setEditingItem(null); setActiveModal("announcement"); }}
+              className="text-xs font-bold text-indigo-600 hover:text-indigo-700 underline cursor-pointer"
+            >
+              + Post Announcement
+            </button>
+          </div>
+
+          {announcements.length > 0 ? (
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {announcements.map((anc) => (
+                <div key={anc.id} className="bg-slate-50 p-4 rounded-[16px] border border-slate-200/80 space-y-2">
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="px-2 py-0.5 rounded-full font-black text-[9px] uppercase bg-indigo-100 text-indigo-700">
+                      Target: {anc.target_audience || "All"}
+                    </span>
+                    <span className="text-[10px] text-slate-400 font-bold">{anc.created_at}</span>
+                  </div>
+                  <h4 className="font-extrabold text-slate-900 text-sm leading-snug">{anc.title}</h4>
+                  <p className="text-slate-600 text-xs font-medium line-clamp-3">{anc.content}</p>
+                  <p className="text-[10px] text-slate-400 font-bold pt-1 border-t border-slate-200/60">Posted by: {anc.author || "Admin"}</p>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-xs font-semibold text-slate-400 text-center py-6">No announcements published yet.</p>
+          )}
+        </div>
+
         {/* Staff Modals */}
         <CreateAssignmentModal
           isOpen={activeModal === "assignment"}
@@ -517,6 +592,20 @@ export default function MemberDashboard() {
             }
           }}
         />
+
+        <CreateAnnouncementModal
+          isOpen={activeModal === "announcement"}
+          onClose={() => setActiveModal(null)}
+          onSubmit={async (data) => {
+            if (!org?.id) return;
+            const created = await createAnnouncement(org.id, {
+              ...data,
+              author: member?.full_name || "Faculty Staff"
+            });
+            setAnnouncements(prev => [created, ...prev]);
+            setActiveModal(null);
+          }}
+        />
       </div>
     );
   };
@@ -534,9 +623,16 @@ export default function MemberDashboard() {
         {/* Welcome Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
-            <h1 className="text-3xl font-black text-slate-900 tracking-tight flex items-center gap-2">
-              {greeting}, {firstName} 👋
-            </h1>
+            <div className="flex items-center gap-3 flex-wrap">
+              <h1 className="text-3xl font-black text-slate-900 tracking-tight flex items-center gap-2">
+                {greeting}, {firstName} 👋
+              </h1>
+              {(studentRecord?.student_code || member?.student_code) && (
+                <span className="px-3 py-1 bg-indigo-100 text-indigo-800 border border-indigo-200 font-mono font-bold text-xs rounded-full shadow-sm">
+                  Student ID: {studentRecord?.student_code || member?.student_code}
+                </span>
+              )}
+            </div>
             <p className="text-slate-500 font-medium mt-1">
               Welcome to your student learning dashboard at <span className="font-bold text-indigo-600">{org?.name || "the Academy"}</span>.
             </p>
@@ -1100,11 +1196,17 @@ export default function MemberDashboard() {
     );
   };
 
-  return org?.organization_type === "Gym"
+  const isAcademyOrg =
+    org?.organization_type === "Academy" ||
+    Boolean(studentRecord) ||
+    Boolean(staffRecord) ||
+    isStaff;
+
+  return isStaff
+    ? renderStaffPortal()
+    : isAcademyOrg
+    ? renderAcademyPortal()
+    : org?.organization_type === "Gym"
     ? renderGymPortal()
-    : org?.organization_type === "Academy"
-    ? isStaff
-      ? renderStaffPortal()
-      : renderAcademyPortal()
     : renderDefaultPortal();
 }

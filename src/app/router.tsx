@@ -28,6 +28,7 @@ import MemberSubscription from "../pages/member/Subscription";
 import MemberNotifications from "../pages/member/Notifications";
 import ExploreCourses from "../pages/member/ExploreCourses";
 import MyCourses from "../pages/member/MyCourses";
+import LectureSchedule from "../pages/member/LectureSchedule";
 
 import SuperAdminLogin from "../pages/superAdmin/SuperAdminLogin";
 import SuperAdminDashboard from "../pages/superAdmin/Dashboard";
@@ -172,8 +173,8 @@ export default function AppRouter() {
         />
 
         <Route
-          path="/staff/courses"
-          element={<ExploreCourses />}
+          path="/staff/lecture-schedule"
+          element={<LectureSchedule />}
         />
 
         <Route

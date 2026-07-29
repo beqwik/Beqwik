@@ -34,24 +34,25 @@ export default function MemberNotifications() {
   const [loading, setLoading] = useState(true);
   const [markingAll, setMarkingAll] = useState(false);
 
+  const effectiveMemberId = member?.id || member?.staff_code || member?.student_code || member?.email || "member-session";
+
   useEffect(() => {
     async function fetchNotifs() {
-      if (!member?.id) { setLoading(false); return; }
       try {
-        const data = await getNotifications(member.id);
+        const data = await getNotifications(effectiveMemberId);
         setNotifications(data || []);
       } catch (e) {
-        console.error(e);
+        console.error("Error fetching notifications:", e);
       } finally {
         setLoading(false);
       }
     }
     fetchNotifs();
-  }, [member?.id]);
+  }, [effectiveMemberId]);
 
   const handleMarkRead = async (id: string) => {
     try {
-      await markNotificationRead(id, member?.id);
+      await markNotificationRead(id, effectiveMemberId);
       setNotifications((prev) =>
         prev.map((n) => (n.id === id ? { ...n, is_read: true } : n))
       );
@@ -61,10 +62,9 @@ export default function MemberNotifications() {
   };
 
   const handleMarkAllRead = async () => {
-    if (!member?.id) return;
     setMarkingAll(true);
     try {
-      await markAllNotificationsRead(member.id);
+      await markAllNotificationsRead(effectiveMemberId);
       setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
     } catch (e) {
       console.error(e);

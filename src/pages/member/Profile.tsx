@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "../../services/supabase";
 import { getCurrentMember, getCurrentOrganization } from "../../services/member/memberAuth";
 import { updateMember } from "../../services/member/memberService";
+import { checkIsStaffMember } from "../../services/organization/academyService";
 import {
   User,
   Mail,
@@ -19,6 +20,24 @@ import {
 export default function MemberProfile() {
   const member = getCurrentMember();
   const org = getCurrentOrganization();
+
+  const [isStaff, setIsStaff] = useState<boolean>(() => {
+    const role = member?.role?.toLowerCase() || "";
+    const email = member?.email?.toLowerCase() || "";
+    const name = member?.full_name?.toLowerCase() || "";
+    return (
+      role === "staff" ||
+      role === "teacher" ||
+      Boolean(member?.designation) ||
+      email.includes("staff") ||
+      email.includes("teacher") ||
+      name.includes("staff") ||
+      name.includes("teacher")
+    );
+  });
+
+  const [studentRecord, setStudentRecord] = useState<any>(null);
+  const [staffRecord, setStaffRecord] = useState<any>(null);
 
   const [activeTab, setActiveTab] = useState<"profile" | "security" | "notifications">("profile");
 
@@ -45,6 +64,32 @@ export default function MemberProfile() {
   const [notifPrefSaved, setNotifPrefSaved] = useState(false);
 
   useEffect(() => {
+    async function verifyAndFetch() {
+      if (org?.id && member?.email) {
+        const verified = await checkIsStaffMember(org.id, member.email);
+        if (verified) setIsStaff(true);
+
+        const { data: stdData } = await supabase
+          .from("academy_students")
+          .select("*")
+          .eq("organization_id", org.id)
+          .ilike("email", member.email.trim())
+          .maybeSingle();
+        if (stdData) setStudentRecord(stdData);
+
+        const { data: stfData } = await supabase
+          .from("academy_staff")
+          .select("*")
+          .eq("organization_id", org.id)
+          .ilike("email", member.email.trim())
+          .maybeSingle();
+        if (stfData) setStaffRecord(stfData);
+      }
+    }
+    verifyAndFetch();
+  }, [org?.id, member?.email]);
+
+  useEffect(() => {
     try {
       const raw = localStorage.getItem(notifKey);
       if (raw) {
@@ -56,6 +101,12 @@ export default function MemberProfile() {
       }
     } catch { /* ignore */ }
   }, [notifKey]);
+
+  const isAcademy =
+    org?.organization_type === "Academy" ||
+    Boolean(studentRecord) ||
+    Boolean(staffRecord) ||
+    isStaff;
 
   const initials = fullName
     ? fullName.split(" ").map((n: string) => n[0]).join("").toUpperCase().slice(0, 2)
@@ -122,23 +173,47 @@ export default function MemberProfile() {
     { key: "notifications", label: "Notifications", icon: Bell },
   ] as const;
 
+  const displayId = isStaff
+    ? (staffRecord?.staff_code || member?.staff_code || member?.id?.slice(0, 12) + "...")
+    : isAcademy
+    ? (studentRecord?.student_code || member?.student_code || member?.id?.slice(0, 12) + "...")
+    : (member?.id?.slice(0, 12) + "...");
+
+  const themeClass = isStaff
+    ? "from-purple-600 via-indigo-600 to-indigo-800 shadow-purple-500/20"
+    : isAcademy
+    ? "from-indigo-600 via-indigo-700 to-purple-700 shadow-indigo-500/20"
+    : "from-[#e05275] via-[#c84a85] to-[#b55fe6] shadow-[#e05275]/20";
+
   return (
     <div className="space-y-8">
       {/* Hero Header */}
-      <div className="bg-gradient-to-r from-[#e05275] via-[#c84a85] to-[#b55fe6] rounded-2xl p-6 flex items-center gap-5 shadow-lg shadow-[#e05275]/20">
+      <div className={`bg-gradient-to-r ${themeClass} rounded-2xl p-6 flex items-center gap-5 shadow-lg`}>
         <div className="w-16 h-16 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center text-white font-black text-2xl shrink-0">
           {initials}
         </div>
         <div className="flex-1 min-w-0">
-          <h1 className="text-xl font-black text-white truncate">{member?.full_name || "Gym Member"}</h1>
-          <p className="text-white/70 text-sm mt-0.5 truncate">{member?.email}</p>
+          <h1 className="text-xl font-black text-white truncate">
+            {member?.full_name || (isStaff ? "Faculty Member" : isAcademy ? "Academy Student" : "Gym Member")}
+          </h1>
+          <p className="text-white/80 text-sm mt-0.5 truncate">{member?.email}</p>
           <div className="flex flex-wrap gap-2 mt-2">
-            <span className="px-2.5 py-0.5 rounded-full bg-white/20 text-white text-xs font-semibold">
-              🏋️ {org?.name || "Gym"}
+            <span className="px-2.5 py-0.5 rounded-full bg-white/20 text-white text-xs font-bold flex items-center gap-1">
+              {isStaff ? "👨‍🏫" : isAcademy ? "🎓" : "🏋️"} {org?.name || (isAcademy ? "The Academy" : "Gym")}
             </span>
-            <span className="px-2.5 py-0.5 rounded-full bg-emerald-400/30 text-white text-xs font-semibold">
-              ✅ Active Member
+            <span className="px-2.5 py-0.5 rounded-full bg-emerald-400/30 text-white text-xs font-bold">
+              {isStaff
+                ? `Faculty (${staffRecord?.designation || member?.designation || "Teacher"})`
+                : isAcademy
+                ? "Active Student"
+                : "Active Member"}
             </span>
+            {displayId && (
+              <span className="px-2.5 py-0.5 rounded-full bg-white/25 text-white font-mono text-xs font-extrabold">
+                {isStaff ? "Staff ID: " : isAcademy ? "Student ID: " : "Member ID: "}
+                {displayId}
+              </span>
+            )}
           </div>
         </div>
       </div>
@@ -172,26 +247,36 @@ export default function MemberProfile() {
           <div className="md:col-span-1 bg-white rounded-2xl border border-slate-200 shadow-sm p-5 h-fit space-y-4">
             <h3 className="font-bold text-slate-800 text-sm uppercase tracking-wider">Account Details</h3>
             {[
-              { icon: User, label: "Member ID", value: member?.id?.slice(0, 12) + "..." || "—" },
-              { icon: Building2, label: "Gym Code", value: org?.organization_code || "—" },
+              {
+                icon: User,
+                label: isStaff ? "Staff ID" : isAcademy ? "Student ID" : "Member ID",
+                value: displayId
+              },
+              {
+                icon: Building2,
+                label: isAcademy ? "Academy Code" : "Gym Code",
+                value: org?.organization_code || "—"
+              },
               { icon: Mail, label: "Email", value: member?.email || "—" },
               { icon: Phone, label: "Phone", value: member?.phone || "—" },
             ].map((item) => {
               const Icon = item.icon;
               return (
                 <div key={item.label} className="flex items-start gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-[#fff0f5] flex items-center justify-center shrink-0">
-                    <Icon className="w-4 h-4 text-[#e05275]" />
+                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${isAcademy ? "bg-indigo-50" : "bg-[#fff0f5]"}`}>
+                    <Icon className={`w-4 h-4 ${isAcademy ? "text-indigo-600" : "text-[#e05275]"}`} />
                   </div>
                   <div>
                     <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{item.label}</p>
-                    <p className="text-sm font-semibold text-slate-800 mt-0.5 break-all">{item.value}</p>
+                    <p className="text-sm font-semibold text-slate-800 mt-0.5 break-all font-mono">{item.value}</p>
                   </div>
                 </div>
               );
             })}
             <div className="pt-3 border-t border-slate-100">
-              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Member Since</p>
+              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">
+                {isStaff ? "Faculty Joined Date" : isAcademy ? "Student Registered Since" : "Member Since"}
+              </p>
               <p className="text-sm font-semibold text-slate-800 mt-0.5">
                 {member?.created_at
                   ? new Date(member.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" })
@@ -204,7 +289,7 @@ export default function MemberProfile() {
           <div className="md:col-span-2 bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
             <div className="px-6 py-4 border-b border-slate-100">
               <h3 className="font-bold text-slate-900">Edit Profile</h3>
-              <p className="text-slate-500 text-xs mt-0.5">Update your personal information.</p>
+              <p className="text-slate-500 text-xs mt-0.5">Update your personal profile information.</p>
             </div>
             <form onSubmit={handleSaveProfile} className="p-6 space-y-5">
               <div className="grid sm:grid-cols-2 gap-5">
@@ -220,7 +305,7 @@ export default function MemberProfile() {
                       value={fullName}
                       onChange={(e) => setFullName(e.target.value)}
                       placeholder="Your full name"
-                      className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#e05275]/40 transition"
+                      className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/40 transition"
                     />
                   </div>
                 </div>
@@ -237,7 +322,7 @@ export default function MemberProfile() {
                       value={phone}
                       onChange={(e) => setPhone(e.target.value)}
                       placeholder="+91 98765 43210"
-                      className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#e05275]/40 transition"
+                      className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/40 transition"
                     />
                   </div>
                 </div>
@@ -262,7 +347,7 @@ export default function MemberProfile() {
                 {/* Org (read-only) */}
                 <div>
                   <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
-                    Gym / Organization
+                    {isAcademy ? "Academy / Institution" : "Gym / Organization"}
                   </label>
                   <div className="relative">
                     <Building2 className="absolute left-3.5 top-3.5 w-4 h-4 text-slate-300" />
@@ -280,7 +365,11 @@ export default function MemberProfile() {
                 <button
                   type="submit"
                   disabled={saving}
-                  className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#e05275] to-[#b55fe6] hover:opacity-90 text-white rounded-xl text-sm font-bold transition disabled:opacity-50 shadow-md shadow-[#e05275]/20"
+                  className={`flex items-center gap-2 px-6 py-3 text-white rounded-xl text-sm font-bold transition disabled:opacity-50 shadow-md ${
+                    isAcademy
+                      ? "bg-gradient-to-r from-indigo-600 to-purple-600 hover:opacity-90 shadow-indigo-500/20"
+                      : "bg-gradient-to-r from-[#e05275] to-[#b55fe6] hover:opacity-90 shadow-[#e05275]/20"
+                  }`}
                 >
                   <Save className="w-4 h-4" />
                   {saving ? "Saving..." : "Save Profile"}
@@ -329,7 +418,7 @@ export default function MemberProfile() {
                     onChange={(e) => setNewPassword(e.target.value)}
                     required
                     placeholder="Min. 6 characters"
-                    className="w-full px-4 py-3 pr-11 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#e05275]/40 transition"
+                    className="w-full px-4 py-3 pr-11 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/40 transition"
                   />
                   <button type="button" onClick={() => setShowNewPw(v => !v)} className="absolute right-3.5 top-3.5 text-slate-400 hover:text-slate-600">
                     {showNewPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -348,7 +437,7 @@ export default function MemberProfile() {
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     required
                     placeholder="Re-enter new password"
-                    className="w-full px-4 py-3 pr-11 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#e05275]/40 transition"
+                    className="w-full px-4 py-3 pr-11 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/40 transition"
                   />
                   <button type="button" onClick={() => setShowConfirmPw(v => !v)} className="absolute right-3.5 top-3.5 text-slate-400 hover:text-slate-600">
                     {showConfirmPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -383,7 +472,11 @@ export default function MemberProfile() {
                 <button
                   type="submit"
                   disabled={savingPassword}
-                  className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#e05275] to-[#b55fe6] hover:opacity-90 text-white rounded-xl text-sm font-bold transition disabled:opacity-50 shadow-md shadow-[#e05275]/20"
+                  className={`flex items-center gap-2 px-6 py-3 text-white rounded-xl text-sm font-bold transition disabled:opacity-50 shadow-md ${
+                    isAcademy
+                      ? "bg-gradient-to-r from-indigo-600 to-purple-600 hover:opacity-90 shadow-indigo-500/20"
+                      : "bg-gradient-to-r from-[#e05275] to-[#b55fe6] hover:opacity-90 shadow-[#e05275]/20"
+                  }`}
                 >
                   <Shield className="w-4 h-4" />
                   {savingPassword ? "Updating..." : "Update Password"}
@@ -406,38 +499,38 @@ export default function MemberProfile() {
               {[
                 {
                   key: "announcements",
-                  label: "Gym Announcements",
-                  desc: "New announcements from your gym admin",
+                  label: isAcademy ? "Academy Notices & Announcements" : "Gym Announcements",
+                  desc: isAcademy ? "Official notices from faculty and academy administration" : "New announcements from your gym admin",
                   icon: "📢",
                   value: notifAnnouncements,
                   setter: setNotifAnnouncements,
                 },
                 {
                   key: "schedule",
-                  label: "Training Schedule",
-                  desc: "Reminders about upcoming sessions and bookings",
+                  label: isAcademy ? "Class Timetable & Schedule" : "Training Schedule",
+                  desc: isAcademy ? "Reminders about upcoming classes, lectures, and exams" : "Reminders about upcoming sessions and bookings",
                   icon: "📅",
                   value: notifSchedule,
                   setter: setNotifSchedule,
                 },
                 {
                   key: "payment",
-                  label: "Payment & Subscription",
-                  desc: "Alerts about subscription renewals and payment status",
+                  label: isAcademy ? "Fee & Payment Updates" : "Payment & Subscription",
+                  desc: isAcademy ? "Alerts about tuition fees, dues, and payment status" : "Alerts about subscription renewals and payment status",
                   icon: "💳",
                   value: notifPayment,
                   setter: setNotifPayment,
                 },
                 {
                   key: "promo",
-                  label: "Promotions & Offers",
-                  desc: "Special discounts and gym promotions",
+                  label: isAcademy ? "Academic Updates & Events" : "Promotions & Offers",
+                  desc: isAcademy ? "Updates about workshops, academic events, and seminars" : "Special discounts and gym promotions",
                   icon: "🎁",
                   value: notifPromo,
                   setter: setNotifPromo,
                 },
               ].map((item) => (
-                <div key={item.key} className="flex items-center justify-between p-4 rounded-xl border border-slate-100 hover:border-[#e05275]/30 transition bg-slate-50/50">
+                <div key={item.key} className="flex items-center justify-between p-4 rounded-xl border border-slate-100 hover:border-indigo-200 transition bg-slate-50/50">
                   <div className="flex items-start gap-3">
                     <span className="text-xl">{item.icon}</span>
                     <div>
@@ -447,7 +540,7 @@ export default function MemberProfile() {
                   </div>
                   <div
                     onClick={() => item.setter((v: boolean) => !v)}
-                    className={`w-11 h-6 rounded-full relative cursor-pointer transition-colors shrink-0 ml-4 ${item.value ? "bg-[#e05275]" : "bg-slate-300"}`}
+                    className={`w-11 h-6 rounded-full relative cursor-pointer transition-colors shrink-0 ml-4 ${item.value ? (isAcademy ? "bg-indigo-600" : "bg-[#e05275]") : "bg-slate-300"}`}
                   >
                     <div className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow-sm transition-transform ${item.value ? "translate-x-5" : "translate-x-1"}`} />
                   </div>
@@ -457,7 +550,11 @@ export default function MemberProfile() {
               <div className="flex items-center gap-4 pt-3 border-t border-slate-100">
                 <button
                   onClick={handleSaveNotifPrefs}
-                  className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#e05275] to-[#b55fe6] hover:opacity-90 text-white rounded-xl text-sm font-bold transition shadow-md shadow-[#e05275]/20"
+                  className={`flex items-center gap-2 px-6 py-3 text-white rounded-xl text-sm font-bold transition shadow-md ${
+                    isAcademy
+                      ? "bg-gradient-to-r from-indigo-600 to-purple-600 hover:opacity-90 shadow-indigo-500/20"
+                      : "bg-gradient-to-r from-[#e05275] to-[#b55fe6] hover:opacity-90 shadow-[#e05275]/20"
+                  }`}
                 >
                   <Save className="w-4 h-4" />
                   Save Preferences

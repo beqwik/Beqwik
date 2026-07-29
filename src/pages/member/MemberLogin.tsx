@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { loginMember } from "../../services/member/memberAuth";
-import { checkIsStaffMember } from "../../services/organization/academyService";
+import { checkIsStaffMember, checkIsAcademyOrg } from "../../services/organization/academyService";
 import { useNavigate, Link } from "react-router-dom";
 import BeQwikLogo from "../../components/BeQwikLogo";
 import { sanitizeErrorMessage } from "../../utils/errorUtils";
@@ -36,8 +36,9 @@ export default function MemberLogin() {
         const member = result.member;
 
         setTimeout(async () => {
-          if (org?.organization_type === "Academy") {
-            const isStaff = await checkIsStaffMember(org.id, member?.email);
+          const isAcademy = await checkIsAcademyOrg(org?.id || organizationCode, member?.email);
+          if (isAcademy || org?.organization_type === "Academy") {
+            const isStaff = await checkIsStaffMember(org?.id || organizationCode, member?.email);
             if (isStaff) {
               navigate("/staff/dashboard");
             } else {
