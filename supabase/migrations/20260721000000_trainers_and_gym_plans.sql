@@ -1,5 +1,5 @@
--- Create trainers table
-CREATE TABLE IF NOT EXISTS public.trainers (
+-- Create gym_trainers table
+CREATE TABLE IF NOT EXISTS public.gym_trainers (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     organization_id UUID NOT NULL REFERENCES public.organizations(id) ON DELETE CASCADE,
     full_name TEXT NOT NULL,
@@ -24,11 +24,12 @@ CREATE TABLE IF NOT EXISTS public.gym_plans (
 );
 
 -- Enable Row Level Security (RLS)
-ALTER TABLE public.trainers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.gym_trainers ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.gym_plans ENABLE ROW LEVEL SECURITY;
 
--- RLS Security Policies for trainers
-CREATE POLICY "Admins can manage trainers for their organization" ON public.trainers
+-- RLS Security Policies for gym_trainers
+DROP POLICY IF EXISTS "Admins can manage trainers for their organization" ON public.gym_trainers;
+CREATE POLICY "Admins can manage trainers for their organization" ON public.gym_trainers
     FOR ALL TO authenticated
     USING (
         organization_id IN (
@@ -41,11 +42,13 @@ CREATE POLICY "Admins can manage trainers for their organization" ON public.trai
         )
     );
 
-CREATE POLICY "Allow public/members to read trainers" ON public.trainers
+DROP POLICY IF EXISTS "Allow public/members to read trainers" ON public.gym_trainers;
+CREATE POLICY "Allow public/members to read trainers" ON public.gym_trainers
     FOR SELECT TO public USING (true);
 
 
 -- RLS Security Policies for gym_plans
+DROP POLICY IF EXISTS "Admins can manage gym_plans for their organization" ON public.gym_plans;
 CREATE POLICY "Admins can manage gym_plans for their organization" ON public.gym_plans
     FOR ALL TO authenticated
     USING (
@@ -59,5 +62,6 @@ CREATE POLICY "Admins can manage gym_plans for their organization" ON public.gym
         )
     );
 
+DROP POLICY IF EXISTS "Allow public/members to read gym_plans" ON public.gym_plans;
 CREATE POLICY "Allow public/members to read gym_plans" ON public.gym_plans
     FOR SELECT TO public USING (true);

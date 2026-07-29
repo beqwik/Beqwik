@@ -119,13 +119,13 @@ export async function deleteGymEquipment(equipmentId: string): Promise<void> {
 // --- TRAINERS ---
 export async function getTrainers(organizationId: string): Promise<Trainer[]> {
   const { data, error } = await supabase
-    .from("trainers")
+    .from("gym_trainers")
     .select("*")
     .eq("organization_id", organizationId)
     .order("created_at", { ascending: false });
   
   if (error) {
-    console.warn("Could not fetch trainers table:", error.message);
+    console.warn("Could not fetch gym_trainers table:", error.message);
     return [];
   }
   return data || [];
@@ -133,7 +133,7 @@ export async function getTrainers(organizationId: string): Promise<Trainer[]> {
 
 export async function createTrainer(trainer: Omit<Trainer, "id">): Promise<Trainer> {
   const { data, error } = await supabase
-    .from("trainers")
+    .from("gym_trainers")
     .insert(trainer)
     .select()
     .single();
@@ -144,7 +144,7 @@ export async function createTrainer(trainer: Omit<Trainer, "id">): Promise<Train
 
 export async function updateTrainerStatus(trainerId: string, status: "Active" | "Inactive"): Promise<void> {
   const { error } = await supabase
-    .from("trainers")
+    .from("gym_trainers")
     .update({ status })
     .eq("id", trainerId);
   
@@ -153,7 +153,7 @@ export async function updateTrainerStatus(trainerId: string, status: "Active" | 
 
 export async function deleteTrainer(trainerId: string): Promise<void> {
   const { error } = await supabase
-    .from("trainers")
+    .from("gym_trainers")
     .delete()
     .eq("id", trainerId);
   

@@ -122,6 +122,18 @@ export default function OverviewTab({
     year: "numeric",
   });
 
+  const orgType = organization?.organization_type || "Academy";
+  const isGym = orgType === "Gym";
+  const isHostelMess = orgType === "Hostel" || orgType === "Mess";
+
+  const studentLabel = isGym ? "Members" : isHostelMess ? "Residents" : "Students";
+  const studentIcon = isGym ? "🏋️‍♂️" : isHostelMess ? "🏠" : "🎓";
+  const staffLabel = isGym ? "Trainers" : isHostelMess ? "Staff" : "Staff";
+  const staffIcon = isGym ? "👨‍🏫" : "💼";
+
+  const memberCount = members.filter(m => m.role === 'student' || !m.role).length;
+  const staffCount = members.filter(m => m.role === 'staff').length;
+
   return (
     <div className="space-y-8 animate-fadeIn">
       {/* ── WELCOME & TOP BAR ── */}
@@ -172,10 +184,10 @@ export default function OverviewTab({
           </h2>
           <div className="mt-3 flex gap-4 text-xs font-semibold">
             <div className="flex items-center gap-1 text-[#e05275]">
-              <span>🎓</span> {members.filter(m => m.role === 'student' || !m.role).length} Students
+              <span>{studentIcon}</span> {memberCount} {studentLabel}
             </div>
             <div className="flex items-center gap-1 text-purple-700">
-              <span>💼</span> {members.filter(m => m.role === 'staff').length} Staff
+              <span>{staffIcon}</span> {staffCount} {staffLabel}
             </div>
           </div>
           <div className="w-full bg-[#ffe8e0] h-1.5 rounded-full mt-3 overflow-hidden">
@@ -203,7 +215,7 @@ export default function OverviewTab({
             {activeSubs.length}
           </h2>
           <p className="text-xs text-slate-400 mt-3 font-medium">
-            {members.filter(m => m.role === 'student' || !m.role).length - activeSubs.length} students with no plan
+            {Math.max(0, memberCount - activeSubs.length)} {studentLabel.toLowerCase()} with no plan
           </p>
         </div>
 

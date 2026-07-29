@@ -32,32 +32,58 @@ function saveLocalReadIds(memberId: string, notificationIds: string[]) {
 }
 
 // =====================================
-// GET ALL NOTIFICATIONS (Direct + Academic Announcements)
+// GET ALL NOTIFICATIONS (Org-type aware)
 // =====================================
 export async function getNotifications(memberId: string) {
   const readSet = getLocalReadSet(memberId);
   const resultNotifs: any[] = [];
   const addedIds = new Set<string>();
 
-  // Extract orgId from local session or member object
+  // Resolve orgId and orgType from local session or member object
   const currentMember = getCurrentMember();
   const currentOrg = getCurrentOrganization();
   let orgId: string | null = currentMember?.organization_id || currentOrg?.id || null;
+  let orgType: string | null = currentOrg?.type || null;
 
-  // 1. Fetch direct member_notifications from Supabase
-  try {
-    if (!orgId) {
-      const { data: memberData } = await supabase
-        .from("members")
+  // If orgId not cached, fetch from DB — check both members and gym_members
+  if (!orgId) {
+    const { data: memberData } = await supabase
+      .from("members")
+      .select("organization_id")
+      .eq("id", memberId)
+      .maybeSingle();
+
+    if (memberData?.organization_id) {
+      orgId = memberData.organization_id;
+    } else {
+      // Try gym_members table (gym org users)
+      const { data: gymMemberData } = await supabase
+        .from("gym_members")
         .select("organization_id")
         .eq("id", memberId)
         .maybeSingle();
 
-      if (memberData?.organization_id) {
-        orgId = memberData.organization_id;
+      if (gymMemberData?.organization_id) {
+        orgId = gymMemberData.organization_id;
       }
     }
+  }
 
+  // If orgType not cached yet, fetch from organizations table
+  if (orgId && !orgType) {
+    const { data: orgData } = await supabase
+      .from("organizations")
+      .select("type")
+      .eq("id", orgId)
+      .maybeSingle();
+
+    if (orgData?.type) {
+      orgType = orgData.type;
+    }
+  }
+
+  // 1. Fetch direct member_notifications (always relevant regardless of org type)
+  try {
     const { data: notifsData } = await supabase
       .from("member_notifications")
       .select("*")
@@ -77,136 +103,89 @@ export async function getNotifications(memberId: string) {
     console.error("Error fetching member_notifications:", err);
   }
 
-  // 2. Target audience filter
-  const targetAudienceAllowed = ["All", "Students"];
-  if (currentMember?.role === "staff" || currentMember?.role === "teacher") {
-    targetAudienceAllowed.push("Teachers");
-  }
-
-  // 3. Fetch Academic Announcements from Supabase
+  // 2. Fetch org-type specific announcements
   if (orgId) {
-    try {
-      const { data: academicAncs } = await supabase
-        .from("academic_announcements")
-        .select("*")
-        .eq("organization_id", orgId)
-        .in("target_audience", targetAudienceAllowed)
-        .order("created_at", { ascending: false });
+    const isGym = orgType === "Gym";
+    const isAcademy = orgType === "Academy" || (!isGym && orgType !== "Hostel" && orgType !== "Mess");
 
-      if (academicAncs && academicAncs.length > 0) {
-        academicAncs.forEach((anc: any) => {
-          if (!addedIds.has(anc.id)) {
-            addedIds.add(anc.id);
-            resultNotifs.push({
-              id: anc.id,
-              member_id: memberId,
-              title: anc.title,
-              message: anc.content,
-              type: anc.priority === "urgent" ? "warning" : anc.priority === "high" ? "reminder" : "info",
-              is_read: readSet.has(anc.id),
-              created_at: anc.created_at
-            });
-          }
-        });
-      }
-    } catch (err) {
-      console.error("Error fetching academic_announcements for member:", err);
-    }
-  }
+    // Gym members → only gym_announcements
+    if (isGym) {
+      try {
+        const { data: gymAncs } = await supabase
+          .from("gym_announcements")
+          .select("*")
+          .eq("organization_id", orgId)
+          .order("created_at", { ascending: false });
 
-  // 3b. Fetch Gym Announcements from Supabase (gym members see these in notification feed)
-  if (orgId) {
-    try {
-      const { data: gymAncs } = await supabase
-        .from("gym_announcements")
-        .select("*")
-        .eq("organization_id", orgId)
-        .order("created_at", { ascending: false });
-
-      if (gymAncs && gymAncs.length > 0) {
-        gymAncs.forEach((anc: any) => {
-          if (!addedIds.has(anc.id)) {
-            addedIds.add(anc.id);
-            resultNotifs.push({
-              id: anc.id,
-              member_id: memberId,
-              title: `📢 ${anc.title}`,
-              message: anc.message,
-              type:
-                anc.priority === "urgent"
-                  ? "warning"
-                  : anc.priority === "high"
-                  ? "reminder"
-                  : "info",
-              is_read: readSet.has(anc.id),
-              created_at: anc.created_at
-            });
-          }
-        });
-      }
-    } catch (err) {
-      console.error("Error fetching gym_announcements for member:", err);
-    }
-  }
-
-  // 4. Scan localStorage for any academic_announcements keys (instant fallback)
-  try {
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key && key.startsWith("academic_announcements_")) {
-        const keyOrgId = key.replace("academic_announcements_", "");
-        if (!orgId || keyOrgId === orgId) {
-          const raw = localStorage.getItem(key);
-          if (raw) {
-            const localAncs = JSON.parse(raw);
-            localAncs.forEach((anc: any) => {
-              const matchesTarget =
-                anc.target_audience === "All" ||
-                anc.target_audience === "Students" ||
-                (targetAudienceAllowed.includes("Teachers") && anc.target_audience === "Teachers");
-
-              if (matchesTarget && !addedIds.has(anc.id)) {
-                addedIds.add(anc.id);
-                resultNotifs.push({
-                  id: anc.id,
-                  member_id: memberId,
-                  title: anc.title,
-                  message: anc.content,
-                  type: anc.priority === "urgent" ? "warning" : anc.priority === "high" ? "reminder" : "info",
-                  is_read: readSet.has(anc.id),
-                  created_at: anc.created_at || new Date().toISOString()
-                });
-              }
-            });
-          }
+        if (gymAncs && gymAncs.length > 0) {
+          gymAncs.forEach((anc: any) => {
+            if (!addedIds.has(anc.id)) {
+              addedIds.add(anc.id);
+              resultNotifs.push({
+                id: anc.id,
+                member_id: memberId,
+                title: `📢 ${anc.title}`,
+                message: anc.message,
+                type:
+                  anc.priority === "urgent"
+                    ? "warning"
+                    : anc.priority === "high"
+                    ? "reminder"
+                    : "info",
+                is_read: readSet.has(anc.id),
+                created_at: anc.created_at
+              });
+            }
+          });
         }
+      } catch (err) {
+        console.error("Error fetching gym_announcements for member:", err);
       }
     }
-  } catch (err) {
-    console.error("Error scanning local academic announcements:", err);
+
+    // Academy members → only academic_announcements
+    if (isAcademy) {
+      const targetAudienceAllowed = ["All", "Students"];
+      if (currentMember?.role === "staff" || currentMember?.role === "teacher") {
+        targetAudienceAllowed.push("Teachers");
+      }
+
+      try {
+        const { data: academicAncs } = await supabase
+          .from("academic_announcements")
+          .select("*")
+          .eq("organization_id", orgId)
+          .in("target_audience", targetAudienceAllowed)
+          .order("created_at", { ascending: false });
+
+        if (academicAncs && academicAncs.length > 0) {
+          academicAncs.forEach((anc: any) => {
+            if (!addedIds.has(anc.id)) {
+              addedIds.add(anc.id);
+              resultNotifs.push({
+                id: anc.id,
+                member_id: memberId,
+                title: anc.title,
+                message: anc.content,
+                type: anc.priority === "urgent" ? "warning" : anc.priority === "high" ? "reminder" : "info",
+                is_read: readSet.has(anc.id),
+                created_at: anc.created_at
+              });
+            }
+          });
+        }
+      } catch (err) {
+        console.error("Error fetching academic_announcements for member:", err);
+      }
+    }
   }
 
   // Sort all notifications by created_at date descending
-  resultNotifs.sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
+  resultNotifs.sort(
+    (a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()
+  );
 
-  if (resultNotifs.length > 0) {
-    return resultNotifs;
-  }
-
-  // Persistent fallback demo notification if 0 entries
-  const fallback = [
-    {
-      id: "notif-demo-1",
-      member_id: memberId,
-      title: "Academic Announcement: Mid-Term Examination Schedule",
-      message: "The mid-term examination timetable for all grades has been published. Please check your course dashboard.",
-      type: "info",
-      is_read: readSet.has("notif-demo-1"),
-      created_at: new Date(Date.now() - 3600000).toISOString()
-    }
-  ];
-
-  return fallback;
+  return resultNotifs;
 }
 
 // =====================================
@@ -246,9 +225,7 @@ export async function markNotificationRead(notificationId: string, memberId?: st
   try {
     const { data } = await supabase
       .from("member_notifications")
-      .update({
-        is_read: true,
-      })
+      .update({ is_read: true })
       .eq("id", notificationId)
       .select()
       .maybeSingle();
@@ -273,14 +250,10 @@ export async function markAllNotificationsRead(memberId: string) {
     console.error(e);
   }
 
-  saveLocalReadIds(memberId, ["notif-demo-1", "test-1", "1", "2"]);
-
   try {
     await supabase
       .from("member_notifications")
-      .update({
-        is_read: true,
-      })
+      .update({ is_read: true })
       .eq("member_id", memberId)
       .eq("is_read", false);
   } catch (error) {

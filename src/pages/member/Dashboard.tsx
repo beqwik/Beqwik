@@ -7,12 +7,16 @@ import {
   getGymSlots,
   getGymBookings,
   getGymEquipment,
+  getTrainers,
   bookGymSlot,
   cancelGymBooking,
+  type Trainer,
 } from "../../services/organization/gymService";
+import { getGymAnnouncements, type GymAnnouncement } from "../../services/organization/gymAnnouncementsService";
 import { 
   Calendar, Users, QrCode, Sparkles, LogIn, LogOut, CheckCircle2,
-  Dumbbell, AlertTriangle, Wrench
+  Dumbbell, AlertTriangle, Wrench, UserCheck, Megaphone,
+  Droplets, Flame, Target
 } from "lucide-react";
 
 function getDaysRemaining(endDate: string) {
@@ -44,7 +48,33 @@ export default function MemberDashboard() {
   const [slots, setSlots] = useState<any[]>([]);
   const [bookings, setBookings] = useState<Record<string, string[]>>({});
   const [gymEquipment, setGymEquipment] = useState<any[]>([]);
+  const [trainers, setTrainers] = useState<Trainer[]>([]);
+  const [gymAnnouncements, setGymAnnouncements] = useState<GymAnnouncement[]>([]);
   const [bookingLoading, setBookingLoading] = useState(false);
+
+  // Daily Goals State (persisted per day per member)
+  const todayStr = new Date().toISOString().split("T")[0];
+  const todayKey = `daily_goals_${member?.id || "guest"}_${todayStr}`;
+  const [dailyGoals, setDailyGoals] = useState<Record<string, boolean>>(() => {
+    try {
+      const saved = localStorage.getItem(todayKey);
+      return saved ? JSON.parse(saved) : { pushups: false, water: false, plank: false };
+    } catch {
+      return { pushups: false, water: false, plank: false };
+    }
+  });
+
+  const toggleGoal = (goalKey: string) => {
+    setDailyGoals((prev) => {
+      const updated = { ...prev, [goalKey]: !prev[goalKey] };
+      try {
+        localStorage.setItem(todayKey, JSON.stringify(updated));
+      } catch (e) {
+        console.error(e);
+      }
+      return updated;
+    });
+  };
 
   useEffect(() => {
     async function fetchData() {
@@ -69,14 +99,18 @@ export default function MemberDashboard() {
   const fetchGymData = useCallback(async () => {
     if (!org?.id) return;
     try {
-      const [fetchedSlots, fetchedBookings, fetchedEquipment] = await Promise.all([
+      const [fetchedSlots, fetchedBookings, fetchedEquipment, fetchedTrainers, fetchedAnnouncements] = await Promise.all([
         getGymSlots(org.id),
         getGymBookings(org.id),
         getGymEquipment(org.id),
+        getTrainers(org.id),
+        getGymAnnouncements(org.id),
       ]);
       setSlots(fetchedSlots);
       setBookings(fetchedBookings);
       setGymEquipment(fetchedEquipment);
+      setTrainers(fetchedTrainers);
+      setGymAnnouncements(fetchedAnnouncements);
     } catch (e) {
       console.error("Failed to load gym data:", e);
     }
@@ -181,43 +215,140 @@ export default function MemberDashboard() {
 
         {/* Top Widgets Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch">
-          {/* DIGITAL ACCESS CARD */}
+          {/* DAILY FITNESS GOALS CARD */}
           <div className="bg-white rounded-[2rem] border border-slate-150 p-6 shadow-[0_10px_30px_rgba(0,0,0,0.015)] flex flex-col justify-between relative overflow-hidden">
-            <div className="absolute top-0 right-0 -mr-6 -mt-6 w-24 h-24 bg-blue-50 rounded-full -z-0 opacity-50" />
-            
-            <div className="relative z-10">
-              <span className="text-xs font-bold text-slate-400 uppercase tracking-widest block mb-1">
-                Touchless Check-In
-              </span>
-              <h3 className="text-lg font-bold text-slate-800">Membership Pass</h3>
+            <div className="absolute top-0 right-0 -mr-6 -mt-6 w-28 h-28 bg-emerald-50 rounded-full -z-0 opacity-60" />
 
-              {/* Barcode/QR Mock */}
-              <div className="my-6 flex flex-col items-center justify-center p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                <QrCode className="w-32 h-32 text-slate-800" />
-                <span className="text-[10px] font-mono text-slate-400 mt-2">MEMBER-{member?.id?.slice(0, 8).toUpperCase() || "ID"}</span>
+            <div className="relative z-10">
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-0.5">
+                    Today's Targets
+                  </span>
+                  <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
+                    Daily Fitness Goals <Target className="w-5 h-5 text-emerald-600" />
+                  </h3>
+                </div>
+                <span className={`px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider ${
+                  Object.values(dailyGoals).filter(Boolean).length === 3
+                    ? "bg-emerald-100 text-emerald-700 border border-emerald-200"
+                    : "bg-blue-50 text-blue-700 border border-blue-100"
+                }`}>
+                  {Object.values(dailyGoals).filter(Boolean).length} / 3 Done
+                </span>
+              </div>
+
+              {/* Progress Bar */}
+              <div className="mt-4 mb-5">
+                <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-emerald-500 to-teal-500 transition-all duration-500 rounded-full"
+                    style={{
+                      width: `${Math.round((Object.values(dailyGoals).filter(Boolean).length / 3) * 100)}%`,
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* Interactive Goals List */}
+              <div className="space-y-3">
+                {/* 1. 30 Pushups */}
+                <button
+                  type="button"
+                  onClick={() => toggleGoal("pushups")}
+                  className={`w-full p-3.5 rounded-2xl border text-left transition-all duration-200 flex items-center justify-between cursor-pointer ${
+                    dailyGoals.pushups
+                      ? "bg-emerald-50/70 border-emerald-200 text-emerald-950"
+                      : "bg-slate-50/60 border-slate-200/80 hover:bg-slate-50 hover:border-slate-300 text-slate-800"
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold ${
+                      dailyGoals.pushups ? "bg-emerald-500 text-white" : "bg-orange-100 text-orange-600"
+                    }`}>
+                      <Flame className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <p className={`text-xs font-black ${dailyGoals.pushups ? "line-through text-emerald-800 opacity-80" : "text-slate-900"}`}>
+                        30 Pushups
+                      </p>
+                      <p className="text-[10px] font-semibold text-slate-400">Upper body strength & endurance</p>
+                    </div>
+                  </div>
+                  <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition ${
+                    dailyGoals.pushups
+                      ? "bg-emerald-500 border-emerald-500 text-white"
+                      : "border-slate-300 bg-white"
+                  }`}>
+                    {dailyGoals.pushups && <CheckCircle2 className="w-4 h-4 text-white" />}
+                  </div>
+                </button>
+
+                {/* 2. 4L Water Intake */}
+                <button
+                  type="button"
+                  onClick={() => toggleGoal("water")}
+                  className={`w-full p-3.5 rounded-2xl border text-left transition-all duration-200 flex items-center justify-between cursor-pointer ${
+                    dailyGoals.water
+                      ? "bg-emerald-50/70 border-emerald-200 text-emerald-950"
+                      : "bg-slate-50/60 border-slate-200/80 hover:bg-slate-50 hover:border-slate-300 text-slate-800"
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold ${
+                      dailyGoals.water ? "bg-emerald-500 text-white" : "bg-sky-100 text-sky-600"
+                    }`}>
+                      <Droplets className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <p className={`text-xs font-black ${dailyGoals.water ? "line-through text-emerald-800 opacity-80" : "text-slate-900"}`}>
+                        4L Water Intake
+                      </p>
+                      <p className="text-[10px] font-semibold text-slate-400">Hydration target for peak performance</p>
+                    </div>
+                  </div>
+                  <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition ${
+                    dailyGoals.water
+                      ? "bg-emerald-500 border-emerald-500 text-white"
+                      : "border-slate-300 bg-white"
+                  }`}>
+                    {dailyGoals.water && <CheckCircle2 className="w-4 h-4 text-white" />}
+                  </div>
+                </button>
+
+                {/* 3. 2 Min Planks Hold */}
+                <button
+                  type="button"
+                  onClick={() => toggleGoal("plank")}
+                  className={`w-full p-3.5 rounded-2xl border text-left transition-all duration-200 flex items-center justify-between cursor-pointer ${
+                    dailyGoals.plank
+                      ? "bg-emerald-50/70 border-emerald-200 text-emerald-950"
+                      : "bg-slate-50/60 border-slate-200/80 hover:bg-slate-50 hover:border-slate-300 text-slate-800"
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold ${
+                      dailyGoals.plank ? "bg-emerald-500 text-white" : "bg-purple-100 text-purple-600"
+                    }`}>
+                      <Dumbbell className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <p className={`text-xs font-black ${dailyGoals.plank ? "line-through text-emerald-800 opacity-80" : "text-slate-900"}`}>
+                        2 Min Planks Hold
+                      </p>
+                      <p className="text-[10px] font-semibold text-slate-400">Core stability & posture strength</p>
+                    </div>
+                  </div>
+                  <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition ${
+                    dailyGoals.plank
+                      ? "bg-emerald-500 border-emerald-500 text-white"
+                      : "border-slate-300 bg-white"
+                  }`}>
+                    {dailyGoals.plank && <CheckCircle2 className="w-4 h-4 text-white" />}
+                  </div>
+                </button>
               </div>
             </div>
-
-            <button
-              onClick={handleCheckIn}
-              className={`w-full py-3.5 rounded-xl font-bold text-sm transition-all duration-300 flex items-center justify-center gap-2 cursor-pointer ${
-                checkedIn
-                  ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                  : "bg-blue-600 hover:bg-blue-700 text-white shadow-md shadow-blue-500/10"
-              }`}
-            >
-              {checkedIn ? (
-                <>
-                  <LogOut className="w-4 h-4" />
-                  <span>Checked In at {checkInTime} (Leave)</span>
-                </>
-              ) : (
-                <>
-                  <LogIn className="w-4 h-4" />
-                  <span>Scan / Simulated Check-In</span>
-                </>
-              )}
-            </button>
           </div>
 
           {/* ACTIVE SUBSCRIPTION DETAILS CARD */}
@@ -403,6 +534,85 @@ export default function MemberDashboard() {
                   </div>
                 ))}
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── TRAINERS SECTION ── */}
+        <div className="bg-white rounded-[2rem] border border-slate-150 shadow-[0_10px_30px_rgba(0,0,0,0.015)] overflow-hidden">
+          <div className="px-6 py-5 border-b border-slate-100 flex items-center gap-3">
+            <UserCheck className="w-5 h-5 text-blue-600" />
+            <div>
+              <h3 className="font-bold text-slate-800 text-lg">Our Trainers</h3>
+              <p className="text-sm text-slate-400 font-medium mt-0.5">Meet the certified fitness coaches at {org?.name || "your gym"}.</p>
+            </div>
+          </div>
+          <div className="p-6">
+            {trainers.filter(t => t.status === "Active").length === 0 ? (
+              <div className="py-10 text-center text-slate-400 font-medium bg-slate-50/50 rounded-2xl border border-slate-100">
+                No active trainers listed yet.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {trainers.filter(t => t.status === "Active").map((trainer) => (
+                  <div key={trainer.id} className="flex items-start gap-4 rounded-2xl border border-slate-100 bg-slate-50/40 p-4 hover:border-blue-200 hover:bg-blue-50/10 transition">
+                    <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-black text-lg flex-shrink-0">
+                      {trainer.full_name.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="font-bold text-slate-800 text-sm truncate">{trainer.full_name}</p>
+                      <p className="text-xs text-blue-600 font-semibold mt-0.5 truncate">{trainer.specialization}</p>
+                      {trainer.bio && (
+                        <p className="text-[11px] text-slate-400 mt-1 line-clamp-2 leading-relaxed">{trainer.bio}</p>
+                      )}
+                      {trainer.phone && (
+                        <p className="text-[10px] text-slate-400 mt-1 font-medium">📞 {trainer.phone}</p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* ── GYM ANNOUNCEMENTS SECTION ── */}
+        {gymAnnouncements.length > 0 && (
+          <div className="bg-white rounded-[2rem] border border-slate-150 shadow-[0_10px_30px_rgba(0,0,0,0.015)] overflow-hidden">
+            <div className="px-6 py-5 border-b border-slate-100 flex items-center gap-3">
+              <Megaphone className="w-5 h-5 text-[#e05275]" />
+              <div>
+                <h3 className="font-bold text-slate-800 text-lg">Gym Announcements</h3>
+                <p className="text-sm text-slate-400 font-medium mt-0.5">Latest notices and updates from gym management.</p>
+              </div>
+            </div>
+            <div className="divide-y divide-slate-100">
+              {gymAnnouncements.slice(0, 5).map((anc) => {
+                const priorityStyle =
+                  anc.priority === "urgent" ? "bg-rose-100 text-rose-700 border-rose-200" :
+                  anc.priority === "high"   ? "bg-amber-100 text-amber-700 border-amber-200" :
+                                              "bg-blue-50 text-blue-700 border-blue-100";
+                const dot =
+                  anc.priority === "urgent" ? "bg-rose-500" :
+                  anc.priority === "high"   ? "bg-amber-500" : "bg-blue-500";
+                return (
+                  <div key={anc.id} className="px-6 py-4 flex gap-4 items-start hover:bg-slate-50/50 transition">
+                    <div className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${dot}`} />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap mb-1">
+                        <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider border ${priorityStyle}`}>
+                          {anc.priority}
+                        </span>
+                        <span className="text-[10px] text-slate-400 font-semibold">
+                          {new Date(anc.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+                        </span>
+                      </div>
+                      <p className="font-bold text-slate-800 text-sm">{anc.title}</p>
+                      <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">{anc.message}</p>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}

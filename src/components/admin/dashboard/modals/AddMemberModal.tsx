@@ -1,6 +1,9 @@
+import React from "react";
+
 interface AddMemberModalProps {
   open: boolean;
   onClose: () => void;
+  orgType?: string;
 
   newMemberName: string;
   setNewMemberName: (value: string) => void;
@@ -25,6 +28,7 @@ interface AddMemberModalProps {
 export default function AddMemberModal({
   open,
   onClose,
+  orgType = "Academy",
   newMemberName,
   setNewMemberName,
   newMemberEmail,
@@ -40,6 +44,19 @@ export default function AddMemberModal({
 }: AddMemberModalProps) {
   if (!open) return null;
 
+  const isGym = orgType === "Gym";
+  const isHostelMess = orgType === "Hostel" || orgType === "Mess";
+
+  const studentLabel = isGym ? "Gym Member" : isHostelMess ? "Resident" : "Student";
+  const studentIcon = isGym ? "🏋️‍♂️" : isHostelMess ? "🏠" : "🎓";
+  const staffLabel = isGym ? "Trainer / Staff" : isHostelMess ? "Staff Member" : "Staff / Teacher";
+  const staffIcon = isGym ? "👨‍🏫" : "💼";
+  const modalSubtitle = isGym
+    ? "Create credentials & profile for a Gym Member or Trainer."
+    : isHostelMess
+    ? "Create credentials & profile for a Resident or Staff member."
+    : "Create credentials & profile as a Student or Staff member.";
+
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 flex items-center justify-center p-4">
       <div className="bg-white rounded-3xl w-full max-w-md p-8 relative shadow-2xl animate-scaleUp">
@@ -50,10 +67,10 @@ export default function AddMemberModal({
           ✕
         </button>
         <h3 className="text-2xl font-bold text-slate-900 mb-2">
-          Register Member
+          Register {isGym ? "Gym User" : "Member"}
         </h3>
         <p className="text-slate-500 text-sm mb-6">
-          Create credentials & profile as a Student or Staff member.
+          {modalSubtitle}
         </p>
 
         <form onSubmit={handleAddMember} className="space-y-4">
@@ -73,7 +90,7 @@ export default function AddMemberModal({
                       : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
                   }`}
                 >
-                  🎓 Student
+                  {studentIcon} {studentLabel}
                 </button>
                 <button
                   type="button"
@@ -84,7 +101,7 @@ export default function AddMemberModal({
                       : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
                   }`}
                 >
-                  💼 Staff / Teacher
+                  {staffIcon} {staffLabel}
                 </button>
               </div>
             </div>
@@ -156,7 +173,7 @@ export default function AddMemberModal({
             <button
               type="submit"
               disabled={addingMember}
-              className="flex-1 py-3 bg-gradient-to-r from-[#e05275] to-[#b55fe6] hover:opacity-90 text-white rounded-xl text-sm font-semibold transition disabled:opacity-50 shadow-md shadow-[#e05275]/20"
+              className="flex-1 py-3 bg-gradient-to-r from-[#e05275] to-[#b55fe6] hover:opacity-90 text-white rounded-xl text-sm font-semibold transition shadow-md shadow-[#e05275]/20 disabled:opacity-50"
             >
               {addingMember ? "Registering..." : "Add Member"}
             </button>

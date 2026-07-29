@@ -259,21 +259,28 @@ export default function AdminDashboard() {
   const handleToggleMember = async (memberId: string, currentActive: boolean) => {
     try {
       const confirmAction = confirm(
-        `Are you sure you want to ${
-          currentActive ? "deactivate" : "activate"
-        } this member?`
+        `Are you sure you want to ${currentActive ? "deactivate" : "activate"} this member?`
       );
       if (!confirmAction) return;
 
-      const { error } = await supabase
-        .from("members")
-        .update({
-          active: !currentActive,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", memberId);
+      const isGym = (organization?.organization_type || type) === "Gym";
 
-      if (error) throw error;
+      if (isGym) {
+        // Gym orgs: toggle in gym_members table
+        const { error } = await supabase
+          .from("gym_members")
+          .update({ active: !currentActive, updated_at: new Date().toISOString() })
+          .eq("id", memberId);
+        if (error) throw error;
+      } else {
+        // Non-gym orgs: toggle in members table
+        const { error } = await supabase
+          .from("members")
+          .update({ active: !currentActive, updated_at: new Date().toISOString() })
+          .eq("id", memberId);
+        if (error) throw error;
+      }
+
       reloadDashboard();
     } catch (err) {
       console.error(err);
@@ -556,6 +563,7 @@ export default function AdminDashboard() {
 
           {activeTab === "members" && (
             <MembersTab
+              orgType={type}
               filteredMembers={filteredMembers}
               memberSearch={memberSearch}
               onSearchChange={setMemberSearch}
@@ -588,6 +596,7 @@ export default function AdminDashboard() {
 
           {activeTab === "members" && (
             <MembersTab
+              orgType={type}
               filteredMembers={filteredMembers}
               memberSearch={memberSearch}
               onSearchChange={setMemberSearch}
@@ -673,6 +682,7 @@ export default function AdminDashboard() {
       <AddMemberModal
         open={showAddMember}
         onClose={() => setShowAddMember(false)}
+        orgType={type}
         newMemberName={newMemberName}
         setNewMemberName={setNewMemberName}
         newMemberEmail={newMemberEmail}
