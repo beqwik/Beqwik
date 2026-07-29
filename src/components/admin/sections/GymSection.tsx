@@ -58,7 +58,12 @@ interface GymEquipment {
   last_inspection: string;
 }
 
+const DAYS_OF_WEEK = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+
 export default function GymSection({ activeTab, organizationId, members }: GymSectionProps) {
+  // Slots Sub-Tab state: "slots" (Manage Recurring Slots) vs "timeline" (Simultaneous Timeline)
+  const [slotsSubTab, setSlotsSubTab] = useState<"slots" | "timeline">("slots");
+
   // Slots State
   const [slots, setSlots] = useState<GymSlot[]>([]);
   const [bookings, setBookings] = useState<Record<string, string[]>>({});
@@ -109,12 +114,16 @@ export default function GymSection({ activeTab, organizationId, members }: GymSe
       setBookings(fetchedBookings);
       setEquipment(fetchedEquipment as GymEquipment[]);
       setTrainers(fetchedTrainers);
+
+      if (fetchedTrainers.length > 0 && !trainerName) {
+        setTrainerName(fetchedTrainers[0].full_name);
+      }
     } catch (err) {
       console.error("Error loading gym data:", err);
     } finally {
       setLoading(false);
     }
-  }, [organizationId]);
+  }, [organizationId, trainerName]);
 
   useEffect(() => {
     fetchData();
@@ -129,7 +138,7 @@ export default function GymSection({ activeTab, organizationId, members }: GymSe
       setLoading(true);
       await createGymSlot({
         organization_id: organizationId,
-        trainer_name: trainerName || "General Trainer",
+        trainer_name: trainerName || (trainers.length > 0 ? trainers[0].full_name : "General Trainer"),
         day_of_week: dayOfWeek,
         start_time: startTime,
         end_time: endTime,
@@ -298,7 +307,7 @@ export default function GymSection({ activeTab, organizationId, members }: GymSe
     } catch (err: any) {
       console.error(err);
       const msg = err?.message || err?.error_description || "Failed to save trainer.";
-      alert(`Error saving trainer: ${msg}\n\nIf the 'gym_trainers' table is missing in Supabase, please run the SQL migration (20260721000000_trainers_and_gym_plans.sql).`);
+      alert(msg);
       setLoading(false);
     }
   };
@@ -339,9 +348,6 @@ export default function GymSection({ activeTab, organizationId, members }: GymSe
   // Calculate equipment metrics
   const eqTotal = equipment.length;
   const eqWorking = equipment.filter((e) => e.status === "Working").length;
-  const eqMaintenance = equipment.filter((e) => e.status === "Under Maintenance").length;
-  const eqBroken = equipment.filter((e) => e.status === "Broken").length;
-  const eqOperationalPercent = eqTotal > 0 ? Math.round((eqWorking / eqTotal) * 100) : 0;
 
   if (loading && slots.length === 0 && equipment.length === 0 && trainers.length === 0) {
     return (
@@ -356,7 +362,386 @@ export default function GymSection({ activeTab, organizationId, members }: GymSe
     <div className={`space-y-8 animate-fadeIn ${loading ? "opacity-60 pointer-events-none transition-opacity" : ""}`}>
       {/* ── TRAINING SLOTS / TRAINER SCHEDULE TAB ── */}
       {(activeTab === "slots" || activeTab === "trainer-schedule") && (
-        <TrainerScheduleManager organizationId={organizationId} />
+        <div className="space-y-6">
+          {/* VIEW SWITCHER SUB-NAV BAR */}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+            <div className="flex bg-slate-100 p-1.5 rounded-xl gap-1.5">
+              <button
+                onClick={() => setSlotsSubTab("slots")}
+                className={`px-4 py-2 rounded-lg text-xs font-bold transition flex items-center gap-2 ${
+                  slotsSubTab === "slots"
+                    ? "bg-white text-indigo-600 shadow-sm"
+                    : "text-slate-500 hover:text-slate-800"
+                }`}
+              >
+                <Calendar className="w-4 h-4" /> Training Slots ({slots.length})
+              </button>
+              <button
+                onClick={() => setSlotsSubTab("timeline")}
+                className={`px-4 py-2 rounded-lg text-xs font-bold transition flex items-center gap-2 ${
+                  slotsSubTab === "timeline"
+                    ? "bg-white text-indigo-600 shadow-sm"
+                    : "text-slate-500 hover:text-slate-800"
+                }`}
+              >
+                <Clock className="w-4 h-4" /> Timeline Schedule View
+              </button>
+            </div>
+
+            {slotsSubTab === "slots" && (
+              <button
+                onClick={() => {
+                  if (trainers.length > 0 && !trainerName) {
+                    setTrainerName(trainers[0].full_name);
+                  }
+                  setShowAddSlot(true);
+                }}
+                className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 shadow-md shadow-indigo-200"
+              >
+                <Plus className="w-4 h-4" /> Create Training Slot
+              </button>
+            )}
+          </div>
+
+          {/* VIEW 1: RECURRING TRAINING SLOTS MANAGEMENT */}
+          {slotsSubTab === "slots" && (
+            <div className="space-y-6">
+              {/* METRIC CARDS */}
+              <div className="grid sm:grid-cols-3 gap-5">
+                <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm flex items-center justify-between">
+                  <div>
+                    <p className="text-slate-500 text-xs font-bold uppercase tracking-wider">Active Training Slots</p>
+                    <h3 className="text-2xl font-extrabold text-slate-900 mt-1">{slots.length}</h3>
+                  </div>
+                  <div className="w-11 h-11 rounded-xl bg-indigo-50 text-indigo-600 font-bold flex items-center justify-center text-lg">
+                    <Calendar className="w-5 h-5" />
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm flex items-center justify-between">
+                  <div>
+                    <p className="text-slate-500 text-xs font-bold uppercase tracking-wider">Total Enrolled Members</p>
+                    <h3 className="text-2xl font-extrabold text-emerald-600 mt-1">{totalBookingsCount}</h3>
+                  </div>
+                  <div className="w-11 h-11 rounded-xl bg-emerald-50 text-emerald-600 font-bold flex items-center justify-center text-lg">
+                    <Users className="w-5 h-5" />
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm flex items-center justify-between">
+                  <div>
+                    <p className="text-slate-500 text-xs font-bold uppercase tracking-wider">Capacity Enrollment</p>
+                    <h3 className="text-2xl font-extrabold text-indigo-600 mt-1">{slotsEnrolledPercent}%</h3>
+                    <p className="text-[11px] text-slate-400 font-semibold mt-0.5">{totalBookingsCount} / {totalCapacity} spots filled</p>
+                  </div>
+                  <div className="w-11 h-11 rounded-xl bg-purple-50 text-purple-600 font-bold flex items-center justify-center text-lg">
+                    <Activity className="w-5 h-5" />
+                  </div>
+                </div>
+              </div>
+
+              {/* SLOTS GRID */}
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {slots.map((slot) => {
+                  const enrolledMemberIds = bookings[slot.id] || [];
+                  const count = enrolledMemberIds.length;
+                  const percent = Math.round((count / slot.max_capacity) * 100);
+
+                  return (
+                    <div key={slot.id} className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm hover:shadow-md transition flex flex-col justify-between">
+                      <div>
+                        {/* Slot Header */}
+                        <div className="flex items-center justify-between">
+                          <span className="px-3 py-1 bg-indigo-50 text-indigo-700 font-black text-xs uppercase tracking-wider rounded-lg border border-indigo-100">
+                            {slot.day_of_week}
+                          </span>
+                          <button
+                            onClick={() => handleDeleteSlot(slot.id)}
+                            className="text-slate-400 hover:text-red-500 p-1 transition"
+                            title="Remove Slot"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+
+                        {/* Slot Details */}
+                        <div className="mt-4">
+                          <h4 className="font-extrabold text-slate-900 text-lg">Trainer: {slot.trainer_name}</h4>
+                          <p className="text-slate-500 text-xs font-medium flex items-center gap-1.5 mt-1">
+                            <Clock className="w-3.5 h-3.5 text-indigo-500" />
+                            Time: {slot.start_time} - {slot.end_time}
+                          </p>
+                        </div>
+
+                        {/* Capacity Progress Bar */}
+                        <div className="mt-5">
+                          <div className="flex justify-between items-center text-xs font-bold mb-1.5">
+                            <span className="text-slate-600">Capacity Enrolled</span>
+                            <span className={count >= slot.max_capacity ? "text-amber-600" : "text-indigo-600"}>
+                              {count}/{slot.max_capacity} Enrolled
+                            </span>
+                          </div>
+                          <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                            <div
+                              className={`h-full rounded-full transition-all duration-500 ${
+                                count >= slot.max_capacity ? "bg-amber-500" : "bg-indigo-600"
+                              }`}
+                              style={{ width: `${Math.min(100, percent)}%` }}
+                            />
+                          </div>
+                        </div>
+
+                        {/* Enrolled Members List */}
+                        <div className="mt-5 pt-4 border-t border-slate-100">
+                          <p className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">
+                            Enrolled Members ({count})
+                          </p>
+                          {count > 0 ? (
+                            <div className="space-y-2 max-h-36 overflow-y-auto pr-1">
+                              {enrolledMemberIds.map((mId) => {
+                                const memberObj = members.find((m) => m.id === mId);
+                                const memberName = memberObj?.full_name || memberObj?.email || `Member (${mId.slice(0, 6)})`;
+                                return (
+                                  <div key={mId} className="flex items-center justify-between bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-100 text-xs">
+                                    <div className="flex items-center gap-2 truncate">
+                                      <div className="w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 font-extrabold text-[10px] flex items-center justify-center shrink-0">
+                                        {memberName.charAt(0).toUpperCase()}
+                                      </div>
+                                      <span className="font-semibold text-slate-800 truncate">{memberName}</span>
+                                    </div>
+                                    <button
+                                      onClick={() => handleCancelBooking(slot.id, mId)}
+                                      className="text-slate-400 hover:text-red-500 transition text-[11px] font-bold"
+                                      title="Cancel Booking"
+                                    >
+                                      ✕
+                                    </button>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          ) : (
+                            <p className="text-xs text-slate-400 italic">No members reserved for this slot yet.</p>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Action Button */}
+                      <div className="mt-5 pt-4 border-t border-slate-100">
+                        <button
+                          onClick={() => {
+                            setSelectedSlotId(slot.id);
+                            setSelectedMemberId(members.length > 0 ? members[0].id : "");
+                          }}
+                          disabled={count >= slot.max_capacity}
+                          className="w-full py-2.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                          {count >= slot.max_capacity ? "Slot Full" : "Enroll Member"}
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {slots.length === 0 && (
+                  <div className="col-span-full py-16 text-center bg-white rounded-2xl border border-slate-200">
+                    <Calendar className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+                    <h4 className="font-bold text-slate-800 text-base">No Training Slots Created Yet</h4>
+                    <p className="text-slate-500 text-xs mt-1 max-w-md mx-auto">
+                      Create training slots for your trainers (e.g. Monday 09:00 - 10:00 Trainer: ABC). Members will see these slots on their dashboard to book reservations.
+                    </p>
+                    <button
+                      onClick={() => setShowAddSlot(true)}
+                      className="mt-4 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition shadow-md shadow-indigo-200"
+                    >
+                      + Create First Training Slot
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* VIEW 2: SIMULTANEOUS TIMELINE VIEW */}
+          {slotsSubTab === "timeline" && (
+            <TrainerScheduleManager organizationId={organizationId} members={members} />
+          )}
+
+          {/* CREATE TRAINING SLOT MODAL */}
+          {showAddSlot && (
+            <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 flex items-center justify-center p-4">
+              <div className="bg-white rounded-3xl w-full max-w-md p-7 relative shadow-2xl animate-scaleUp">
+                <button
+                  onClick={() => setShowAddSlot(false)}
+                  className="absolute right-6 top-6 text-slate-400 hover:text-slate-600 text-xl font-bold"
+                >
+                  ✕
+                </button>
+                <h3 className="text-xl font-bold text-slate-900 mb-1">Create Training Slot</h3>
+                <p className="text-slate-500 text-xs mb-5">Members can view and reserve this slot on their dashboard.</p>
+
+                <form onSubmit={handleAddSlot} className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                      Trainer / Instructor <span className="text-rose-500">*</span>
+                    </label>
+                    {trainers.length > 0 ? (
+                      <select
+                        value={trainerName}
+                        onChange={(e) => setTrainerName(e.target.value)}
+                        className="w-full px-4 py-3 rounded-xl border border-slate-200 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-600 bg-white"
+                        required
+                      >
+                        {trainers.map((t) => (
+                          <option key={t.id} value={t.full_name}>
+                            {t.full_name} ({t.specialization})
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <input
+                        type="text"
+                        required
+                        value={trainerName}
+                        onChange={(e) => setTrainerName(e.target.value)}
+                        placeholder="e.g. ABC"
+                        className="w-full px-4 py-3 rounded-xl border border-slate-200 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-600"
+                      />
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                      Day of Week <span className="text-rose-500">*</span>
+                    </label>
+                    <select
+                      value={dayOfWeek}
+                      onChange={(e) => setDayOfWeek(e.target.value)}
+                      className="w-full px-4 py-3 rounded-xl border border-slate-200 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-600 bg-white"
+                      required
+                    >
+                      {DAYS_OF_WEEK.map((day) => (
+                        <option key={day} value={day}>{day}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                        Start Time <span className="text-rose-500">*</span>
+                      </label>
+                      <input
+                        type="time"
+                        required
+                        value={startTime}
+                        onChange={(e) => setStartTime(e.target.value)}
+                        className="w-full px-4 py-3 rounded-xl border border-slate-200 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-600"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                        End Time <span className="text-rose-500">*</span>
+                      </label>
+                      <input
+                        type="time"
+                        required
+                        value={endTime}
+                        onChange={(e) => setEndTime(e.target.value)}
+                        className="w-full px-4 py-3 rounded-xl border border-slate-200 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-600"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                      Max Member Capacity <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      type="number"
+                      required
+                      min="1"
+                      max="100"
+                      value={maxCapacity}
+                      onChange={(e) => setMaxCapacity(e.target.value)}
+                      className="w-full px-4 py-3 rounded-xl border border-slate-200 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-600"
+                    />
+                  </div>
+
+                  <div className="pt-4 flex gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setShowAddSlot(false)}
+                      className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition shadow-md shadow-indigo-200"
+                    >
+                      Create Slot
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+
+          {/* ENROLL MEMBER MODAL */}
+          {selectedSlotId && (
+            <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 flex items-center justify-center p-4">
+              <div className="bg-white rounded-3xl w-full max-w-md p-7 relative shadow-2xl animate-scaleUp">
+                <button
+                  onClick={() => setSelectedSlotId(null)}
+                  className="absolute right-6 top-6 text-slate-400 hover:text-slate-600 text-xl font-bold"
+                >
+                  ✕
+                </button>
+                <h3 className="text-xl font-bold text-slate-900 mb-1">Enroll Member into Slot</h3>
+                <p className="text-slate-500 text-xs mb-5">Select a registered gym member to reserve this slot.</p>
+
+                <form onSubmit={handleBookSlot} className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                      Select Member <span className="text-rose-500">*</span>
+                    </label>
+                    <select
+                      value={selectedMemberId}
+                      onChange={(e) => setSelectedMemberId(e.target.value)}
+                      className="w-full px-4 py-3 rounded-xl border border-slate-200 text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-600 bg-white"
+                      required
+                    >
+                      <option value="">-- Choose Member --</option>
+                      {members.map((m) => (
+                        <option key={m.id} value={m.id}>
+                          {m.full_name || m.email} ({m.email})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="pt-4 flex gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedSlotId(null)}
+                      className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition shadow-md shadow-indigo-200"
+                    >
+                      Confirm Enrollment
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+        </div>
       )}
 
       {/* ── TRAINERS TAB ── */}
@@ -448,55 +833,59 @@ export default function GymSection({ activeTab, organizationId, members }: GymSe
                     <input
                       type="text"
                       required
-                      placeholder="E.g., Marcus Vance"
                       value={trainerFullName}
                       onChange={(e) => setTrainerFullName(e.target.value)}
+                      placeholder="e.g. Alex Rivera"
                       className="w-full px-4 py-3 rounded-xl border border-slate-250 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-700 mb-1">Email (Optional)</label>
-                      <input
-                        type="email"
-                        placeholder="marcus@gym.com"
-                        value={trainerEmail}
-                        onChange={(e) => setTrainerEmail(e.target.value)}
-                        className="w-full px-4 py-3 rounded-xl border border-slate-250 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-700 mb-1">Phone (Optional)</label>
-                      <input
-                        type="text"
-                        placeholder="+91 9876543210"
-                        value={trainerPhone}
-                        onChange={(e) => setTrainerPhone(e.target.value)}
-                        className="w-full px-4 py-3 rounded-xl border border-slate-250 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                      />
-                    </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">Email Address</label>
+                    <input
+                      type="email"
+                      required
+                      value={trainerEmail}
+                      onChange={(e) => setTrainerEmail(e.target.value)}
+                      placeholder="alex@gym.com"
+                      className="w-full px-4 py-3 rounded-xl border border-slate-250 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">Phone Number</label>
+                    <input
+                      type="text"
+                      value={trainerPhone}
+                      onChange={(e) => setTrainerPhone(e.target.value)}
+                      placeholder="+91 98765 43210"
+                      className="w-full px-4 py-3 rounded-xl border border-slate-250 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    />
                   </div>
 
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 mb-1">Specialization</label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="E.g., Bodybuilding, Yoga, HIIT"
+                    <select
                       value={trainerSpecialization}
                       onChange={(e) => setTrainerSpecialization(e.target.value)}
-                      className="w-full px-4 py-3 rounded-xl border border-slate-250 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    />
+                      className="w-full px-4 py-3 rounded-xl border border-slate-250 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+                    >
+                      <option value="General Fitness">General Fitness</option>
+                      <option value="Personal Training">Personal Training</option>
+                      <option value="CrossFit & Strength">CrossFit & Strength</option>
+                      <option value="HIIT & Cardio">HIIT & Cardio</option>
+                      <option value="Yoga & Core">Yoga & Core</option>
+                      <option value="Bodybuilding">Bodybuilding</option>
+                    </select>
                   </div>
 
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 mb-1">Bio / Notes</label>
                     <textarea
                       rows={2}
-                      placeholder="Brief info about experience or certifications..."
                       value={trainerBio}
                       onChange={(e) => setTrainerBio(e.target.value)}
+                      placeholder="Certifications, experience..."
                       className="w-full px-4 py-3 rounded-xl border border-slate-250 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     />
                   </div>
@@ -511,7 +900,7 @@ export default function GymSection({ activeTab, organizationId, members }: GymSe
                     </button>
                     <button
                       type="submit"
-                      className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-semibold transition"
+                      className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-semibold transition shadow-md shadow-indigo-200"
                     >
                       Save Trainer
                     </button>
@@ -526,105 +915,71 @@ export default function GymSection({ activeTab, organizationId, members }: GymSe
       {/* ── EQUIPMENT TAB ── */}
       {activeTab === "equipment" && (
         <div className="space-y-6">
-          {/* STATS HEADER */}
-          <div className="grid sm:grid-cols-4 gap-5">
-            <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
-              <p className="text-slate-500 text-xs font-semibold uppercase tracking-wider">Total Equipment</p>
-              <h3 className="text-2xl font-extrabold text-slate-900 mt-1">{eqTotal}</h3>
-            </div>
-            <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
-              <p className="text-slate-500 text-xs font-semibold uppercase tracking-wider">Working</p>
-              <h3 className="text-2xl font-extrabold text-green-600 mt-1">{eqWorking}</h3>
-            </div>
-            <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
-              <p className="text-slate-500 text-xs font-semibold uppercase tracking-wider">Maintenance</p>
-              <h3 className="text-2xl font-extrabold text-amber-600 mt-1">{eqMaintenance}</h3>
-            </div>
-            <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
-              <p className="text-slate-500 text-xs font-semibold uppercase tracking-wider">Broken</p>
-              <h3 className="text-2xl font-extrabold text-red-600 mt-1">{eqBroken}</h3>
-            </div>
-          </div>
-
           {/* ACTION BAR */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
             <div>
-              <h2 className="text-lg font-bold text-slate-900">Equipment Inventory</h2>
-              <p className="text-slate-500 text-xs mt-0.5">Track fitness machines, maintenance cycles, and condition status.</p>
+              <h2 className="text-lg font-bold text-slate-900">Equipment Inventory & Health Status</h2>
+              <p className="text-slate-500 text-xs mt-0.5 font-medium">Track machines, free weights, inspection dates, and maintenance logs.</p>
             </div>
             <button
               onClick={() => setShowAddEquipment(true)}
               className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-semibold transition flex items-center justify-center gap-2 shadow-md shadow-indigo-200"
             >
-              <Plus className="w-4 h-4" /> Log Equipment
+              <Plus className="w-4 h-4" /> Log New Equipment
             </button>
           </div>
 
-          {/* EQUIPMENT TABLE */}
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="bg-slate-50 border-b border-slate-200 text-xs font-bold text-slate-500 uppercase tracking-wider">
-                    <th className="px-6 py-4">Equipment Name</th>
-                    <th className="px-6 py-4">Category</th>
-                    <th className="px-6 py-4">Last Inspection</th>
-                    <th className="px-6 py-4 text-center">Status</th>
-                    <th className="px-6 py-4 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 text-sm font-medium">
-                  {equipment.map((eq) => (
-                    <tr key={eq.id} className="hover:bg-slate-50/60 transition">
-                      <td className="px-6 py-4 font-bold text-slate-900 flex items-center gap-3">
-                        <Dumbbell className="w-4 h-4 text-indigo-500" />
-                        {eq.name}
-                      </td>
-                      <td className="px-6 py-4 text-slate-600">
-                        <span className="px-2.5 py-1 bg-slate-100 rounded-lg text-xs font-bold text-slate-700">
-                          {eq.category}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-slate-500 text-xs">
-                        {eq.last_inspection ? new Date(eq.last_inspection).toLocaleDateString("en-IN") : "N/A"}
-                      </td>
-                      <td className="px-6 py-4 text-center">
-                        <span
-                          onClick={() => handleToggleStatus(eq.id, eq.status)}
-                          className={`px-3 py-1 rounded-full text-xs font-extrabold cursor-pointer select-none transition ${
-                            eq.status === "Working"
-                              ? "bg-green-50 text-green-700 border border-green-200"
-                              : eq.status === "Under Maintenance"
-                              ? "bg-amber-50 text-amber-700 border border-amber-200"
-                              : "bg-red-50 text-red-600 border border-red-200"
-                          }`}
-                          title="Click to cycle status"
-                        >
-                          {eq.status}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <button
-                          onClick={() => handleDeleteEquipment(eq.id)}
-                          className="text-slate-400 hover:text-red-500 font-bold p-1 transition"
-                          title="Remove Equipment"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
+          {/* EQUIPMENT GRID */}
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {equipment.map((item) => (
+              <div key={item.id} className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm hover:shadow-md transition">
+                <div className="flex items-start justify-between">
+                  <span className="px-3 py-1 bg-slate-100 text-slate-700 font-bold text-xs rounded-lg uppercase tracking-wider">
+                    {item.category}
+                  </span>
+                  <button
+                    onClick={() => handleToggleStatus(item.id, item.status)}
+                    className={`px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1 transition ${
+                      item.status === "Working"
+                        ? "bg-green-50 text-green-700 border border-green-200"
+                        : item.status === "Under Maintenance"
+                        ? "bg-amber-50 text-amber-700 border border-amber-200"
+                        : "bg-red-50 text-red-700 border border-red-200"
+                    }`}
+                  >
+                    {item.status === "Working" && <Check className="w-3 h-3" />}
+                    {item.status === "Under Maintenance" && <Clock className="w-3 h-3" />}
+                    {item.status === "Broken" && <AlertTriangle className="w-3 h-3" />}
+                    {item.status}
+                  </button>
+                </div>
 
-                  {equipment.length === 0 && (
-                    <tr>
-                      <td colSpan={5} className="px-6 py-12 text-center text-slate-400 italic">
-                        No equipment logged yet. Click "Log Equipment" to start.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
+                <div className="mt-4">
+                  <h3 className="font-extrabold text-slate-900 text-lg">{item.name}</h3>
+                  <p className="text-slate-400 text-xs mt-1">
+                    Last Inspection: {item.last_inspection ? new Date(item.last_inspection).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }) : "N/A"}
+                  </p>
+                </div>
+
+                <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between text-xs">
+                  <span className="text-slate-400 italic">Click status to toggle</span>
+                  <button
+                    onClick={() => handleDeleteEquipment(item.id)}
+                    className="text-slate-400 hover:text-red-500 font-bold p-1 transition flex items-center gap-1"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" /> Remove
+                  </button>
+                </div>
+              </div>
+            ))}
+
+            {equipment.length === 0 && (
+              <div className="col-span-full py-12 text-center bg-white rounded-2xl border border-slate-200">
+                <Dumbbell className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+                <p className="text-slate-500 font-semibold text-sm">No gym equipment logged yet.</p>
+                <p className="text-slate-400 text-xs mt-1">Click "Log New Equipment" to add machines, treadmills, weights...</p>
+              </div>
+            )}
           </div>
 
           {/* ADD EQUIPMENT MODAL */}
@@ -638,7 +993,7 @@ export default function GymSection({ activeTab, organizationId, members }: GymSe
                   ✕
                 </button>
                 <h3 className="text-2xl font-bold text-slate-900 mb-2">Log New Equipment</h3>
-                <p className="text-slate-500 text-sm mb-6">Inventory record for gyms and fitness centers.</p>
+                <p className="text-slate-500 text-sm mb-6">Add machine or weight set to tracking roster.</p>
 
                 <form onSubmit={handleAddEquipment} className="space-y-4">
                   <div>
@@ -646,7 +1001,7 @@ export default function GymSection({ activeTab, organizationId, members }: GymSe
                     <input
                       type="text"
                       required
-                      placeholder="E.g., Cardio Run Pro Treadmill"
+                      placeholder="e.g. Commercial Treadmill T80"
                       value={eqName}
                       onChange={(e) => setEqName(e.target.value)}
                       className="w-full px-4 py-3 rounded-xl border border-slate-250 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
