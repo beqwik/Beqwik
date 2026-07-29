@@ -81,7 +81,6 @@ export default function MemberDashboard() {
   const [bookingLoading, setBookingLoading] = useState(false);
 
   // Academy States
-  const [isStaff, setIsStaff] = useState(false);
   const [academyClasses, setAcademyClasses] = useState<any[]>([]);
   const [academyRegs, setAcademyRegs] = useState<Record<string, string[]>>({});
   const [assignments, setAssignments] = useState<AssignmentItem[]>([]);
