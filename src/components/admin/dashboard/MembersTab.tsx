@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 
 interface MembersTabProps {
+  orgType?: string;
   filteredMembers: any[];
   memberSearch: string;
   onSearchChange: (value: string) => void;
@@ -11,6 +12,7 @@ interface MembersTabProps {
 }
 
 export default function MembersTab({
+  orgType = "Academy",
   filteredMembers,
   memberSearch,
   onSearchChange,
@@ -35,6 +37,17 @@ export default function MembersTab({
     return true;
   });
 
+  const isGym = orgType === "Gym";
+  const isHostelMess = orgType === "Hostel" || orgType === "Mess";
+
+  const studentPlural = isGym ? "Gym Members" : isHostelMess ? "Residents" : "Students";
+  const studentIcon = isGym ? "🏋️‍♂️" : isHostelMess ? "🏠" : "🎓";
+  const studentSingular = isGym ? "Gym Member" : isHostelMess ? "Resident" : "Student";
+
+  const staffPlural = isGym ? "Trainers / Staff" : isHostelMess ? "Staff Members" : "Staff / Teachers";
+  const staffIcon = isGym ? "👨‍🏫" : "💼";
+  const staffSingular = isGym ? "Trainer / Staff" : isHostelMess ? "Staff Member" : "Staff";
+
   return (
     <div className="space-y-6 animate-fadeIn">
       {/* SEPARATE COUNTS HEADER CARDS */}
@@ -51,21 +64,21 @@ export default function MembersTab({
 
         <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm flex items-center justify-between">
           <div>
-            <p className="text-slate-500 text-xs font-semibold uppercase tracking-wider">Students</p>
+            <p className="text-slate-500 text-xs font-semibold uppercase tracking-wider">{studentPlural}</p>
             <h3 className="text-2xl font-extrabold text-[#e05275] mt-1">{studentCount}</h3>
           </div>
           <div className="w-11 h-11 rounded-xl bg-[#fff0f5] text-[#e05275] font-bold flex items-center justify-center text-lg">
-            🎓
+            {studentIcon}
           </div>
         </div>
 
         <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm flex items-center justify-between">
           <div>
-            <p className="text-slate-500 text-xs font-semibold uppercase tracking-wider">Staff / Teachers</p>
+            <p className="text-slate-500 text-xs font-semibold uppercase tracking-wider">{staffPlural}</p>
             <h3 className="text-2xl font-extrabold text-purple-700 mt-1">{staffCount}</h3>
           </div>
           <div className="w-11 h-11 rounded-xl bg-purple-50 text-purple-700 font-bold flex items-center justify-center text-lg">
-            💼
+            {staffIcon}
           </div>
         </div>
       </div>
@@ -103,7 +116,7 @@ export default function MembersTab({
                   : "text-slate-500 hover:text-slate-800"
               }`}
             >
-              Students ({studentCount})
+              {studentPlural} ({studentCount})
             </button>
             <button
               onClick={() => setRoleFilter("staff")}
@@ -113,7 +126,7 @@ export default function MembersTab({
                   : "text-slate-500 hover:text-slate-800"
               }`}
             >
-              Staff ({staffCount})
+              {staffPlural} ({staffCount})
             </button>
           </div>
         </div>
@@ -123,7 +136,7 @@ export default function MembersTab({
           onClick={() => onAddMember()}
           className="px-5 py-2.5 bg-gradient-to-r from-[#e05275] to-[#b55fe6] hover:opacity-90 text-white rounded-xl text-sm font-semibold transition shadow-md shadow-[#e05275]/20 flex items-center justify-center gap-2"
         >
-          ➕ Register Member
+          ➕ Register {isGym ? "Gym User" : "Member"}
         </button>
       </div>
 
@@ -182,7 +195,7 @@ export default function MembersTab({
                             ? "bg-purple-50 text-purple-700 border border-purple-100" 
                             : "bg-pink-50 text-pink-700 border border-pink-100"
                         }`}>
-                          {isStaff ? "💼 Staff" : "🎓 Student"}
+                          {isStaff ? `${staffIcon} ${staffSingular}` : `${studentIcon} ${studentSingular}`}
                         </span>
                       </td>
                       <td className="px-6 py-4">

@@ -31,19 +31,31 @@ class DashboardService {
   }
 
   /**
-   * Fetch members belonging to organization
-   */
-  /**
-   * Fetch members belonging to organization
+   * Fetch members belonging to organization.
+   * For Gym orgs → queries gym_members table directly.
+   * For other orgs → queries members/students/staff tables.
    */
   async getMembers(organizationId: string) {
-    // 1. Collect member IDs from member_credentials linked to this organization
+    // 1. Fetch from gym_members (dedicated table for gym users)
+    const { data: gymMembersData } = await supabase
+      .from("gym_members")
+      .select("*")
+      .eq("organization_id", organizationId)
+      .order("created_at", { ascending: false });
+
+    // 2. Fetch from gym_trainers (dedicated table for gym trainers)
+    const { data: gymTrainersData } = await supabase
+      .from("gym_trainers")
+      .select("*")
+      .eq("organization_id", organizationId)
+      .order("created_at", { ascending: false });
+
+    // 3. Fetch from legacy tables (member_credentials, organization_members, members, students, staff)
     const { data: credentials } = await supabase
       .from("member_credentials")
       .select("member_id")
       .eq("organization_id", organizationId);
 
-    // 2. Collect member IDs from organization_members linked to this organization
     const { data: orgMembers } = await supabase
       .from("organization_members")
       .select("member_id")
@@ -53,7 +65,6 @@ class DashboardService {
     const orgIds = orgMembers?.map((m) => m.member_id).filter(Boolean) || [];
     const combinedMemberIds = Array.from(new Set([...credIds, ...orgIds]));
 
-    // 3. Execute parallel queries for members, students, staff, and direct org members
     const [
       membersResult,
       directMembersResult,
@@ -91,8 +102,26 @@ class DashboardService {
     const directMembers = directMembersResult.data || [];
     const studentsData = studentsResult.data || [];
     const staffData = staffResult.data || [];
+    const gymMembers = gymMembersData || [];
+    const gymTrainers = gymTrainersData || [];
 
-    // Combine all member profile records
+    // Map dedicated gym_members to unified format
+    const mappedGymMembers = gymMembers.map((m: any) => ({
+      ...m,
+      role: m.role === "trainer" ? "staff" : "student",
+      is_staff: m.role === "trainer",
+      is_student: m.role === "member",
+    }));
+
+    // Map dedicated gym_trainers to unified format (counted under Trainers / Staff)
+    const mappedGymTrainers = gymTrainers.map((t: any) => ({
+      ...t,
+      role: "staff",
+      is_staff: true,
+      is_student: false,
+      active: t.status === "Active" || t.active === true || t.status === undefined,
+    }));
+
     const allMembersMap = new Map<string, any>();
     const emailToMember = new Map<string, any>();
 
@@ -101,7 +130,6 @@ class DashboardService {
       if (m.email) emailToMember.set(m.email.toLowerCase(), m);
     }
 
-    // Process staff
     const mappedStaff = staffData.map((staff: any) => {
       const memberRef = emailToMember.get(staff.email?.toLowerCase());
       return {
@@ -114,7 +142,6 @@ class DashboardService {
       };
     });
 
-    // Process students
     const mappedStudents = studentsData.map((student: any) => {
       const memberRef = emailToMember.get(student.email?.toLowerCase());
       return {
@@ -127,13 +154,13 @@ class DashboardService {
       };
     });
 
-    // Collect emails that are already accounted for in staff/students
     const processedEmails = new Set([
+      ...mappedGymMembers.map((g) => g.email?.toLowerCase()).filter(Boolean),
+      ...mappedGymTrainers.map((t) => t.email?.toLowerCase()).filter(Boolean),
       ...mappedStaff.map((s) => s.email?.toLowerCase()).filter(Boolean),
       ...mappedStudents.map((s) => s.email?.toLowerCase()).filter(Boolean),
     ]);
 
-    // Include members from `members` table that weren't in staff or students
     const remainingMembers = Array.from(allMembersMap.values())
       .filter((m) => !processedEmails.has(m.email?.toLowerCase()))
       .map((m) => ({
@@ -142,12 +169,17 @@ class DashboardService {
         active: m.active !== undefined ? m.active : true,
       }));
 
-    const finalMembersList = [...mappedStaff, ...mappedStudents, ...remainingMembers];
+    const finalMembersList = [
+      ...mappedGymMembers,
+      ...mappedGymTrainers,
+      ...mappedStaff,
+      ...mappedStudents,
+      ...remainingMembers,
+    ];
 
-    // Deduplicate by ID / email to guarantee a clean list
     const uniqueMembersMap = new Map<string, any>();
     for (const m of finalMembersList) {
-      const key = m.id || m.email?.toLowerCase();
+      const key = m.email?.toLowerCase() || m.id;
       if (key && !uniqueMembersMap.has(key)) {
         uniqueMembersMap.set(key, m);
       }
