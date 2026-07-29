@@ -63,26 +63,38 @@ serve(async (req) => {
     let member: any;
 
     if (isGym) {
-      // GYM PATH: fetch from gym_members
-      const { data: gymMember, error: gmError } = await supabase
+      // 1. Try gym_members table first (new users)
+      const { data: gymMember } = await supabase
         .from("gym_members")
         .select("*")
         .eq("id", credentials.member_id)
-        .single();
+        .maybeSingle();
 
-      if (gmError || !gymMember) {
-        throw new Error("Gym member profile not found");
+      if (gymMember) {
+        member = gymMember;
+      } else {
+        // 2. Fallback to generic members table (for existing members like Bunny)
+        const { data: memberData } = await supabase
+          .from("members")
+          .select("*")
+          .eq("id", credentials.member_id)
+          .maybeSingle();
+
+        if (memberData) {
+          member = memberData;
+        } else {
+          throw new Error("Member profile not found");
+        }
       }
-      member = gymMember;
     } else {
       // NON-GYM PATH: fetch from members
-      const { data: memberData, error: memberError } = await supabase
+      const { data: memberData } = await supabase
         .from("members")
         .select("*")
         .eq("id", credentials.member_id)
-        .single();
+        .maybeSingle();
 
-      if (memberError || !memberData) {
+      if (!memberData) {
         throw new Error("Member profile not found");
       }
       member = memberData;
