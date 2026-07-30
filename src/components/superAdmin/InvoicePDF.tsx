@@ -24,9 +24,9 @@ const SUCCESS = "#15803d";
 
 const styles = StyleSheet.create({
   page: {
-    paddingTop: 40,
-    paddingBottom: 40,
-    paddingHorizontal: 40,
+    paddingTop: 24,
+    paddingBottom: 24,
+    paddingHorizontal: 28,
     backgroundColor: "#ffffff",
     fontFamily: "Helvetica",
     fontSize: 12,
@@ -39,30 +39,40 @@ const styles = StyleSheet.create({
     alignItems: "center",
     borderBottomWidth: 1,
     borderBottomColor: BORDER,
-    paddingBottom: 20,
-    marginBottom: 35,
+    paddingBottom: 12,
+    marginBottom: 18,
   },
+labelBold: {
+  fontFamily: "Helvetica-Bold",
+  fontSize: 11,
+  color: DARK,
+},
 
+value: {
+  fontFamily: "Helvetica",
+  fontSize: 11,
+  color: DARK,
+},
   logoRow: {
     flexDirection: "row",
     alignItems: "center",
   },
 
   logo: {
-  width: 85,
-  height: 85,
-  marginRight: 18,
+  width: 60,
+  height: 60,
+  marginRight: 14,
 },
 
   companyName: {
-    fontSize: 30,
-    fontWeight: "bold",
+    fontSize: 24,
+    fontFamily: "Helvetica-Bold",
     color: PRIMARY,
   },
 
   companySub: {
-    marginTop: 3,
-    fontSize: 12,
+    marginTop: 2,
+    fontSize: 10,
     color: LIGHT,
   },
 
@@ -79,26 +89,26 @@ const styles = StyleSheet.create({
   invoiceTitleRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: 30,
+    marginBottom: 16,
     alignItems: "center",
   },
 
   invoiceTitle: {
-    fontSize: 34,
-    fontWeight: "bold",
+    fontSize: 28,
+   fontFamily: "Helvetica-Bold",
     color: DARK,
   },
 
   invoiceNumber: {
     color: DARK,
     fontSize: 13,
-    fontWeight: "bold",
+    fontFamily: "Helvetica-Bold",
   },
 
   topGrid: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: 28,
+    marginBottom: 14,
   },
 
   card: {
@@ -107,26 +117,27 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: BORDER,
     borderRadius: 8,
-    padding: 18,
+    padding: 12,
   },
 
   cardTitle: {
     color: PRIMARY,
     fontSize: 11,
-    fontWeight: "bold",
-    marginBottom: 10,
+    fontFamily: "Helvetica-Bold",
+    marginBottom: 6,
     textTransform: "uppercase",
   },
 
-  line: {
-    marginBottom: 6,
-    color: DARK,
-    fontSize: 12,
-  },
+ line: {
+  marginBottom: 6,
+  color: DARK,
+  fontSize: 11,
+  lineHeight: 1.5,
+},
 
   label: {
     color: LIGHT,
-    marginBottom: 3,
+    marginBottom: 1,
     fontSize: 9,
   },
 
@@ -146,15 +157,15 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     backgroundColor: PRIMARY,
     color: "#fff",
-    paddingVertical: 14,
+    paddingVertical: 10,
     paddingHorizontal: 12,
-    fontWeight: "bold",
+    fontFamily: "Helvetica-Bold",
     fontSize: 11,
   },
 
   tableRow: {
     flexDirection: "row",
-    paddingVertical: 18,
+    paddingVertical: 10,
     paddingHorizontal: 12,
     borderBottomWidth: 1,
     borderBottomColor: BORDER,
@@ -167,18 +178,20 @@ const styles = StyleSheet.create({
 
   colQty: {
     width: "15%",
-    textAlign: "center",
-  },
+    textAlign: "right",
+    paddingRight: 12,
+},
 
   colPrice: {
-    width: "17%",
+   width: "15%",
     textAlign: "right",
+    paddingRight: 12,
   },
 
   colTotal: {
-    width: "18%",
+    width: "15%",
     textAlign: "right",
-    fontWeight: "bold",
+    paddingRight: 12,
   },
 });
 export default function InvoicePDF({
@@ -197,6 +210,9 @@ const formattedDate = paymentDate.toLocaleDateString("en-IN", {
 });
 
 const amount = Number(invoice?.amount || 0);
+
+const planName =
+  invoice.organizations?.organization_subscriptions?.[0]?.subscription_plans?.name ?? "-";
 
 return (
   <Document>
@@ -253,59 +269,74 @@ return (
         <View style={styles.card}>
 
           <Text style={styles.cardTitle}>
-            Bill To
-          </Text>
+  Bill To
+</Text>
 
-          <Text style={styles.label}>Organization</Text>
-          <Text style={styles.line}>
-            {invoice.organizations?.organization_name || "Organization"}
-          </Text>
-
-          <Text style={styles.label}>Plan</Text>
-          <Text style={styles.line}>
-            {invoice.subscription_plans?.name || "BeQwik Professional Organization Subscription"}
-            <Text
+<View
   style={{
-    fontSize: 9,
-    color: "#64748b",
-    marginTop: 4,
+    flexDirection: "row",
+    marginBottom: 6,
   }}
 >
-  Plan :
-  {invoice.subscription_plans?.name || "Basic"}
-</Text>
-          </Text>
+  <Text style={styles.labelBold}>Organization: </Text>
 
-          <Text style={styles.label}>Status</Text>
-          <Text style={styles.line}>
-            {invoice.payment_status?.toUpperCase()}
-          </Text>
+  <Text style={styles.value}>
+    {invoice.organizations?.organization_name || "-"}
+  </Text>
+</View>
 
-        </View>
+<View
+  style={{
+    flexDirection: "row",
+    marginBottom: 6,
+  }}
+>
+  <Text style={styles.labelBold}>Plan: </Text>
 
+  <Text style={styles.value}>
+    {planName}
+  </Text>
+</View>
+
+<View
+  style={{
+    flexDirection: "row",
+    marginBottom: 6,
+  }}
+>
+  <Text style={styles.labelBold}>Status: </Text>
+
+  <Text style={styles.value}>
+    {invoice.payment_status?.toUpperCase() || "-"}
+  </Text>
+</View>
+        
+</View>
         {/* FROM */}
 
         <View style={styles.card}>
 
-          <Text style={styles.cardTitle}>
-            From
-          </Text>
+          <Text style={styles.cardTitle}>From</Text>
 
-          <Text style={styles.line}>
-            BeQwik Technologies
-          </Text>
+<Text style={styles.line}>
+  <Text style={{ fontWeight: "bold" }}>Company: </Text>
+  BeQwik Technologies
+</Text>
 
-          <Text style={styles.line}>
-            Pune, Maharashtra
-          </Text>
+<Text style={styles.line}>
+  <Text style={{ fontWeight: "bold" }}>Location: </Text>
+  Pune, Maharashtra
+</Text>
 
-          <Text style={styles.line}>
-            support@beqwik.com
-          </Text>
+<Text style={styles.line}>
+  <Text style={{ fontWeight: "bold" }}>Email: </Text>
+  support@beqwik.com
+</Text>
 
-          <Text style={styles.line}>
-            GST: XXXXXXXX
-          </Text>
+<Text style={styles.line}>
+  <Text style={{ fontWeight: "bold" }}>GST: </Text>
+  XXXXXXXX
+</Text>
 
         </View>
 
@@ -317,33 +348,37 @@ return (
 
         <View style={styles.card}>
 
-          <Text style={styles.cardTitle}>
-            Invoice Details
-          </Text>
+         <Text style={styles.cardTitle}>
+  Invoice Details
+</Text>
 
-          <Text style={styles.label}>Invoice Number</Text>
-          <Text style={styles.line}>{invoiceNumber}</Text>
+<Text style={styles.line}>
+  <Text style={{ fontWeight: "bold" }}>Invoice No: </Text>
+  {invoiceNumber}
+</Text>
 
-          <Text style={styles.label}>Invoice Date</Text>
-          <Text style={styles.line}>{formattedDate}</Text>
+<Text style={styles.line}>
+  <Text style={{ fontWeight: "bold" }}>Invoice Date: </Text>
+  {formattedDate}
+</Text>
 
         </View>
 
         <View style={styles.card}>
 
           <Text style={styles.cardTitle}>
-            Payment Details
-          </Text>
+  Payment Details
+</Text>
 
-          <Text style={styles.label}>Payment ID</Text>
-          <Text style={styles.line}>
-            {invoice.transaction_id || "-"}
-          </Text>
+<Text style={styles.line}>
+  <Text style={{ fontWeight: "bold" }}>Payment ID: </Text>
+  {invoice.transaction_id || "-"}
+</Text>
 
-          <Text style={styles.label}>Payment Status</Text>
-          <Text style={styles.line}>
-            {invoice.payment_status}
-          </Text>
+<Text style={styles.line}>
+  <Text style={{ fontWeight: "bold" }}>Status: </Text>
+  {invoice.payment_status?.toUpperCase() || "-"}
+</Text>
 
         </View>
 
@@ -375,20 +410,22 @@ return (
 
         <View style={styles.tableRow}>
 
-          <Text style={styles.colDescription}>
-            {invoice.subscription_plans?.name || "Subscription Plan"}
-          </Text>
+         <Text style={styles.colDescription}>
+ {planName !== "-"
+  ? `${planName} Subscription`
+  : "Subscription Plan"}
+</Text>
 
           <Text style={styles.colQty}>
             1
           </Text>
 
           <Text style={styles.colPrice}>
-            ₹{amount.toLocaleString("en-IN")}
+            INR {amount.toLocaleString("en-IN")}
           </Text>
 
           <Text style={styles.colTotal}>
-            ₹{amount.toLocaleString("en-IN")}
+            INR {amount.toLocaleString("en-IN")}
           </Text>
 
         </View>
@@ -399,7 +436,7 @@ return (
       <View
         style={{
           alignItems: "flex-end",
-          marginTop: 25,
+          marginTop: 12,
         }}
       >
         <View
@@ -409,7 +446,7 @@ return (
             borderColor: BORDER,
             borderRadius: 8,
             backgroundColor: BG,
-            padding: 20,
+            padding: 12,
           }}
         >
           <View
@@ -422,7 +459,7 @@ return (
             <Text>Subtotal</Text>
 
             <Text>
-              ₹{amount.toLocaleString("en-IN")}
+              INR {amount.toLocaleString("en-IN")}
             </Text>
           </View>
 
@@ -435,7 +472,7 @@ return (
           >
             <Text>Tax</Text>
 
-            <Text>₹0</Text>
+            <Text>INR 0</Text>
           </View>
 
           <View
@@ -449,7 +486,7 @@ return (
           >
             <Text
               style={{
-                fontWeight: "bold",
+                fontFamily: "Helvetica-Bold",
                 fontSize: 12,
               }}
             >
@@ -458,12 +495,12 @@ return (
 
             <Text
               style={{
-                fontWeight: "bold",
+                fontFamily: "Helvetica-Bold",
                 color: PRIMARY,
                 fontSize: 12,
               }}
             >
-              ₹{amount.toLocaleString("en-IN")}
+              INR {amount.toLocaleString("en-IN")}
             </Text>
           </View>
         </View>
@@ -473,8 +510,8 @@ return (
 
       <View
         style={{
-          marginTop: 35,
-          padding: 15,
+          marginTop: 16,
+          padding: 10,
           backgroundColor: "#eef5ff",
           borderRadius: 8,
           borderWidth: 1,
@@ -483,7 +520,7 @@ return (
       >
         <Text
           style={{
-            fontWeight: "bold",
+            fontFamily: "Helvetica-Bold",
             marginBottom: 6,
             color: PRIMARY,
           }}
@@ -507,10 +544,10 @@ return (
 
       <View
         style={{
-          marginTop: 25,
+          marginTop: 16,
           borderTopWidth: 1,
           borderTopColor: BORDER,
-          paddingTop: 18,
+          paddingTop: 12,
           alignItems: "center",
         }}
       >
