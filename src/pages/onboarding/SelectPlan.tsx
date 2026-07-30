@@ -283,6 +283,11 @@ const { data, error: verifyError } = result;
                   start_date: today.toISOString(),
                   end_date: endDate.toISOString(),
                   auto_renew: true,
+                  price_at_purchase: plan.monthly_price,
+                  plan_name_snapshot: plan.name,
+                  max_members_snapshot: plan.max_members,
+                  max_staff_snapshot: plan.max_staff,
+                  features_snapshot: plan.features,
                 });
 
               if (subError) throw subError;

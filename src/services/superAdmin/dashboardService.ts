@@ -71,6 +71,7 @@ export async function getDashboardStats(): Promise<DashboardStats> {
   .from("organization_subscriptions")
   .select(`
     status,
+    price_at_purchase,
     subscription_plans (
       monthly_price
     )
@@ -134,10 +135,13 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     (total: number, subscription: any) => {
       if (subscription.status !== "active") return total;
 
-      const monthlyPrice =
-        Number(subscription.subscription_plans?.monthly_price ?? 0);
+      // Prefer snapshot price (actual amount paid); fall back to current plan price for old records
+      const price =
+        subscription.price_at_purchase != null
+          ? Number(subscription.price_at_purchase)
+          : Number(subscription.subscription_plans?.monthly_price ?? 0);
 
-      return total + monthlyPrice;
+      return total + price;
     },
     0
   ) || 0;

@@ -6,6 +6,16 @@ export interface Subscription {
   start_date: string;
   end_date: string;
   auto_renew: boolean;
+  /** Price actually paid at the time of purchase (snapshot). Null on old records. */
+  price_at_purchase: number | null;
+  /** Plan name at the time of purchase (snapshot). Null on old records. */
+  plan_name_snapshot: string | null;
+  /** Max members at the time of purchase (snapshot). Null on old records. */
+  max_members_snapshot: number | null;
+  /** Max staff at the time of purchase (snapshot). Null on old records. */
+  max_staff_snapshot: number | null;
+  /** Features at the time of purchase (snapshot). Null on old records. */
+  features_snapshot: string[] | null;
 
   organizations: {
     organization: string;
@@ -51,6 +61,11 @@ export async function getSubscriptions() {
         end_date,
         auto_renew,
         created_at,
+        price_at_purchase,
+        plan_name_snapshot,
+        max_members_snapshot,
+        max_staff_snapshot,
+        features_snapshot,
         organizations (
           organization_name
         ),

@@ -6,8 +6,15 @@ interface Subscription {
   start_date: string;
   end_date: string;
   auto_renew: boolean;
+  /** Snapshot of price at purchase time. Null on old records. */
+  price_at_purchase?: number | null;
+  /** Snapshot of plan name at purchase time. Null on old records. */
+  plan_name_snapshot?: string | null;
+  max_members_snapshot?: number | null;
+  max_staff_snapshot?: number | null;
+  features_snapshot?: string[] | null;
   organizations?: { organization_name?: string; organization?: string };
-  subscription_plans?: { name?: string; monthly_price?: number };
+  subscription_plans?: { name?: string; monthly_price?: number; max_members?: number; max_staff?: number; };
 }
 
 interface Props {
@@ -24,7 +31,14 @@ export default function OrgSubscriptionsList({
   ).length;
 
   const monthlyRevenue = subscriptions.reduce(
-    (sum, s) => sum + Number(s.subscription_plans?.monthly_price || 0),
+    (sum, s) => {
+      // Prefer snapshot price (price actually paid); fall back to current plan price for old records
+      const price =
+        s.price_at_purchase != null
+          ? s.price_at_purchase
+          : Number(s.subscription_plans?.monthly_price || 0);
+      return sum + price;
+    },
     0
   );
 
@@ -116,6 +130,7 @@ export default function OrgSubscriptionsList({
                   <th className="text-left p-5 pl-8">Organization</th>
                   <th className="text-left p-5">Plan</th>
                   <th className="text-left p-5">Price</th>
+                  <th className="text-left p-5">Limits</th>
                   <th className="text-left p-5">Start Date</th>
                   <th className="text-left p-5">End Date</th>
                   <th className="text-left p-5">Auto Renew</th>
@@ -137,14 +152,35 @@ export default function OrgSubscriptionsList({
 
                     <td className="p-5">
                       <span className="inline-flex items-center px-3 py-1 rounded-xl bg-purple-50 text-brand-purple text-xs font-semibold border border-purple-100">
-                        {sub.subscription_plans?.name ?? "—"}
+                        {/* Prefer snapshot name; fall back to live joined name for old records */}
+                        {sub.plan_name_snapshot ?? sub.subscription_plans?.name ?? "—"}
                       </span>
                     </td>
 
                     <td className="p-5 font-bold text-slate-800">
-                      {sub.subscription_plans?.monthly_price != null
-                        ? `₹${Number(sub.subscription_plans.monthly_price).toLocaleString("en-IN")}`
+                      {/* Prefer snapshot price; fall back to live joined price for old records */}
+                      {(sub.price_at_purchase != null
+                        ? sub.price_at_purchase
+                        : sub.subscription_plans?.monthly_price) != null
+                        ? `₹${Number(
+                            sub.price_at_purchase ?? sub.subscription_plans?.monthly_price
+                          ).toLocaleString("en-IN")}`
                         : "—"}
+                    </td>
+
+                    <td className="p-5 text-sm text-slate-600">
+                      <div className="flex flex-col gap-1">
+                        <span className="font-semibold text-slate-700">
+                          {(sub.max_members_snapshot ?? sub.subscription_plans?.max_members)
+                            ? `${sub.max_members_snapshot ?? sub.subscription_plans?.max_members} Members`
+                            : "Unlimited Members"}
+                        </span>
+                        <span className="text-xs text-slate-400">
+                          {(sub.max_staff_snapshot ?? sub.subscription_plans?.max_staff)
+                            ? `${sub.max_staff_snapshot ?? sub.subscription_plans?.max_staff} Staff`
+                            : "Unlimited Staff"}
+                        </span>
+                      </div>
                     </td>
 
                     <td className="p-5 text-sm text-slate-600">

@@ -111,7 +111,7 @@ serve(async (req) => {
     const endDate = new Date();
     endDate.setMonth(endDate.getMonth() + 1);
 
-    // 3. Create organization_subscriptions
+    // 3. Create organization_subscriptions (with full price & plan snapshot)
     const { data: subscription, error: subError } = await supabase
       .from("organization_subscriptions")
       .insert({
@@ -121,6 +121,11 @@ serve(async (req) => {
         start_date: today.toISOString(),
         end_date: endDate.toISOString(),
         auto_renew: true,
+        price_at_purchase: plan.monthly_price,
+        plan_name_snapshot: plan.name,
+        max_members_snapshot: plan.max_members,
+        max_staff_snapshot: plan.max_staff,
+        features_snapshot: plan.features,
       })
       .select()
       .single();

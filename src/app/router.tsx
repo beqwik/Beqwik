@@ -46,6 +46,7 @@ import Communication from "../pages/superAdmin/Communication";
 
 import ProtectedRoute from "../components/auth/ProtectedRoute";
 import OrganizationGuard from "../components/auth/OrganizationGuard";
+import SuperAdminGuard from "./guards/SuperAdminGuard";
 
 export default function AppRouter() {
   return (
@@ -229,71 +230,77 @@ export default function AppRouter() {
 
       {/* ================= SUPER ADMIN ================= */}
 
-      <Route path="/superadmin/login" element={<SuperAdminLogin />} />
+      <Route path="/super-admin/login" element={<SuperAdminLogin />} />
 
-      <Route element={<SuperAdminLayout />}>
+      <Route
+        element={
+          <SuperAdminGuard>
+            <SuperAdminLayout />
+          </SuperAdminGuard>
+        }
+      >
         <Route
-          path="/superadmin"
-          element={<Navigate to="/superadmin/dashboard" replace />}
+          path="/super-admin"
+          element={<Navigate to="/super-admin/dashboard" replace />}
         />
 
         <Route
-          path="/superadmin/dashboard"
+          path="/super-admin/dashboard"
           element={<SuperAdminDashboard />}
         />
 
         <Route
-          path="/superadmin/organizations"
+          path="/super-admin/organizations"
           element={<Organizations />}
         />
 
         <Route
-          path="/superadmin/members"
+          path="/super-admin/members"
           element={<Members />}
         />
 
         <Route
-          path="/superadmin/payments"
+          path="/super-admin/payments"
           element={<Payments />}
         />
 
         <Route
-          path="/superadmin/subscriptions"
+          path="/super-admin/subscriptions"
           element={<Subscriptions />}
         />
 
         <Route
-          path="/superadmin/analytics"
+          path="/super-admin/analytics"
           element={<Analytics />}
         />
 
         <Route
-          path="/superadmin/settings"
+          path="/super-admin/settings"
           element={<Settings />}
         />
 
         <Route
-          path="/superadmin/invoices"
+          path="/super-admin/invoices"
           element={<Invoices />}
         />
 
         <Route
-          path="/superadmin/renewals"
+          path="/super-admin/renewals"
           element={<Renewals />}
         />
 
         <Route
-          path="/superadmin/automation"
+          path="/super-admin/automation"
           element={<Automation />}
         />
 
         <Route
-          path="/superadmin/reports"
+          path="/super-admin/reports"
           element={<Reports />}
         />
 
         <Route
-          path="/superadmin/communication"
+          path="/super-admin/communication"
           element={<Communication />}
         />
       </Route>
