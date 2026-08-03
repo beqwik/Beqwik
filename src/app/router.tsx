@@ -1,4 +1,5 @@
 import { Routes, Route, Navigate } from "react-router-dom";
+import { Toaster } from "sonner";
 
 import ResetPassword from "../pages/auth/ResetPassword";
 import AuthCallback from "../pages/auth/AuthCallback";
@@ -47,12 +48,14 @@ import Communication from "../pages/superAdmin/Communication";
 import ProtectedRoute from "../components/auth/ProtectedRoute";
 import OrganizationGuard from "../components/auth/OrganizationGuard";
 import SuperAdminGuard from "./guards/SuperAdminGuard";
+import AutomationDetails from "@/pages/superAdmin/AutomationDetails";
 
 export default function AppRouter() {
   return (
+    <>
     <Routes>
       {/* ================= PUBLIC ================= */}
-
+      
       <Route element={<PublicLayout />}>
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<LoginPage />} />
@@ -293,7 +296,11 @@ export default function AppRouter() {
           path="/super-admin/automation"
           element={<Automation />}
         />
-
+         
+         <Route
+          path="/super-admin/automation/:id"
+          element={<AutomationDetails />}
+       />
         <Route
           path="/super-admin/reports"
           element={<Reports />}
@@ -307,6 +314,14 @@ export default function AppRouter() {
 
       {/* Catch-all Fallback Route */}
       <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+      </Routes>
+
+      <Toaster
+        position="top-center"
+        richColors
+        closeButton
+      />
+    </>
+    
   );
 }

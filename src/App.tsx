@@ -1,6 +1,7 @@
 import { BrowserRouter } from "react-router-dom";
 import Router from "./app/router";
 
+
 function App() {
   console.log("========== APP RENDER ==========");
 

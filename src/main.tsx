@@ -10,13 +10,11 @@ import { OrganizationProvider } from "./context/OrganizationContext";
 import { SubscriptionProvider } from "./context/SubscriptionContext";
 
 createRoot(document.getElementById("root")!).render(
-  <StrictMode>
-    <AuthProvider>
-      <OrganizationProvider>
-        <SubscriptionProvider>
-          <App />
-        </SubscriptionProvider>
-      </OrganizationProvider>
-    </AuthProvider>
-  </StrictMode>
+  <AuthProvider>
+    <OrganizationProvider>
+      <SubscriptionProvider>
+        <App />
+      </SubscriptionProvider>
+    </OrganizationProvider>
+  </AuthProvider>
 );

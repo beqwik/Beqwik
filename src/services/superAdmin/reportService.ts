@@ -23,44 +23,57 @@ export async function getSystemReport(
       break;
   }
 
-  // Total Revenue
-  const { data: payments } = await supabase
+  const [
+  paymentsResult,
+  organizationsCountResult,
+  activeSubscriptionsResult,
+  renewalsResult,
+  plansResult,
+] = await Promise.all([
+
+  supabase
     .from("payments")
     .select("amount, paid_at")
     .eq("payment_status", "paid")
-    .gte("paid_at", startDate.toISOString());
+    .gte("paid_at", startDate.toISOString()),
 
-  const totalRevenue =
-    payments?.reduce(
-      (sum, payment) => sum + Number(payment.amount),
-      0
-    ) ?? 0;
-
-  // Total Organizations
-  const { count: totalOrganizations } = await supabase
+  supabase
     .from("organizations")
-    .select("*", { count: "exact", head: true });
+    .select("*", { count: "exact", head: true }),
 
-  // Active Subscriptions
-  const { count: activeSubscriptions } = await supabase
+  supabase
     .from("organization_subscriptions")
     .select("*", { count: "exact", head: true })
-    .eq("status", "active");
+    .eq("status", "active"),
 
-  // Upcoming Renewals
-  const { data: renewals } = await supabase
+  supabase
     .from("organization_subscriptions")
     .select("end_date")
-    .eq("status", "active");
+    .eq("status", "active"),
 
-    const { data: plans } = await supabase
-  .from("organization_subscriptions")
-  .select(`
-    subscription_plans (
-      name
-    )
-  `)
-  .eq("status", "active");
+  supabase
+    .from("organization_subscriptions")
+    .select(`
+      subscription_plans (
+        name
+      )
+    `)
+    .eq("status", "active"),
+
+]);
+
+const payments = paymentsResult.data;
+
+const totalOrganizations = organizationsCountResult.count;
+const activeSubscriptions = activeSubscriptionsResult.count;
+const renewals = renewalsResult.data;
+const plans = plansResult.data;
+
+const totalRevenue =
+  payments?.reduce(
+    (sum, payment) => sum + Number(payment.amount),
+    0
+  ) ?? 0;
 
   const today = new Date();
 
@@ -114,66 +127,85 @@ const planDistribution = Object.entries(distribution).map(
   })
 );
 
-const { data: recentPayments } = await supabase
-  .from("payments")
-  .select(`
-    id,
-    amount,
-    paid_at,
-    payment_status,
-    transaction_id,
-    organizations (
-      organization_name,
-      organization_subscriptions (
-        subscription_plans (
-          name
+const [
+  recentPaymentsResult,
+  organizationsResult,
+  studentsResult,
+  staffResult,
+  subscriptionsResult,
+] = await Promise.all([
+
+  supabase
+    .from("payments")
+    .select(`
+      id,
+      amount,
+      paid_at,
+      payment_status,
+      transaction_id,
+      organizations (
+        organization_name,
+        organization_subscriptions (
+          subscription_plans (
+            name
+          )
         )
       )
-    )
-  `)
-  .eq("payment_status", "paid")
-.gte("paid_at", startDate.toISOString())
-.order("paid_at", { ascending: false })
-.limit(5);
+    `)
+    .eq("payment_status", "paid")
+    .gte("paid_at", startDate.toISOString())
+    .order("paid_at", { ascending: false })
+    .limit(5),
 
-// Organization Audit Data
+  supabase
+    .from("organizations")
+    .select(`
+      id,
+      organization_name
+    `),
 
-const { data: organizations } = await supabase
-  .from("organizations")
-  .select(`
-    id,
-    organization_name
-  `);
+  supabase
+    .from("students")
+    .select("organization_id"),
 
-const { data: students, error: studentError } = await supabase
-  .from("students")
-  .select("id, full_name, organization_id");
+  supabase
+    .from("staff")
+    .select("organization_id"),
 
-console.log("Student Error:", studentError);
-console.log("Students:", students);
-console.log("First Student:", students?.[0]);
-console.log(
-  "Type:",
-  typeof students?.[0]?.organization_id
-);
+  supabase
+    .from("organization_subscriptions")
+    .select(`
+      organization_id,
+      status,
+      created_at,
+      subscription_plans (
+        name
+      )
+    `),
 
-const { data: staff } = await supabase
-  .from("staff")
-  .select(`
-    organization_id
-  `);
+]);
 
-const { data: subscriptions } = await supabase
-  .from("organization_subscriptions")
-  .select(`
-    organization_id,
-    status,
-    created_at,
-    subscription_plans (
-      name
-    )
-  `);
-console.table(students);
+const recentPayments = recentPaymentsResult.data;
+const organizations = organizationsResult.data;
+const students = studentsResult.data;
+const staff = staffResult.data;
+const subscriptions = subscriptionsResult.data;
+
+const studentCounts: Record<string, number> = {};
+const staffCounts: Record<string, number> = {};
+
+students?.forEach((s: any) => {
+  const id = String(s.organization_id);
+
+  studentCounts[id] = (studentCounts[id] || 0) + 1;
+});
+
+staff?.forEach((s: any) => {
+  const id = String(s.organization_id);
+
+  staffCounts[id] = (staffCounts[id] || 0) + 1;
+});
+
 const organizationAudit =
   organizations?.map((org: any) => {
 
@@ -181,25 +213,11 @@ const organizationAudit =
       subscriptions?.find(
         (s: any) => s.organization_id === org.id
       );
-console.log(
-  "Org:",
-  org.organization_name,
-  org.id
-);
+
 
 const count =
-  students?.filter((s: any) => {
-    console.log(
-      "Comparing:",
-      s.organization_id,
-      org.id,
-      s.organization_id === org.id
-    );
+  studentCounts[String(org.id)] || 0;
 
-    return String(s.organization_id).trim() === String(org.id).trim();
-  }).length ?? 0;
-
-console.log("Student Count:", count);
     return {
 
       name: org.organization_name,
@@ -209,10 +227,8 @@ console.log("Student Count:", count);
 
       students: count,
 
-      staff:
-        staff?.filter(
-          (s: any) => s.organization_id === org.id
-        ).length ?? 0,
+     staff:
+  staffCounts[String(org.id)] || 0,
 
       lastActivity:
         subscription?.created_at ??

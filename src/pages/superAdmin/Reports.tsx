@@ -1,27 +1,5 @@
-import {
-  FileBarChart,
-  Download,
-  IndianRupee,
-  Building2,
-  CreditCard,
-  BellRing,
-} from "lucide-react";
-
-import {
-  ResponsiveContainer,
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  PieChart,
-  Pie,
-  Cell,
-  Legend,
-  Label,
-} from "recharts";
-
+import {FileBarChart,Download,IndianRupee,Building2,CreditCard,BellRing,} from "lucide-react";
+import {ResponsiveContainer,AreaChart,Area,XAxis,YAxis,CartesianGrid,Tooltip,PieChart,Pie,Cell,Legend,Label,} from "recharts";
 import { useEffect, useState } from "react";
 import { getSystemReport } from "../../services/superAdmin/reportService";
 import {
@@ -36,35 +14,53 @@ export default function Reports() {
   const [dateFilter, setDateFilter] = useState("30d");
   
 
-  useEffect(() => {
-    loadReport();
-  }, []);
+ console.log("Reports Render");
+
+useEffect(() => {
+  loadReport();
+}, [dateFilter]);
 
   async function loadReport() {
-    setLoading(true);
+  setLoading(true);
 
-    const data = await getSystemReport(dateFilter);
+  console.time("Supabase Report");
 
-    setReport(data);
+  const data = await getSystemReport(dateFilter);
 
-    setLoading(false);
-  }
+  console.timeEnd("Supabase Report");
+
+  setReport(data);
+
+  setLoading(false);
+}
 
   const reports = [
-    {
-  title: "Monthly Financial Statement",
-  description:
-    "Breakdown of monthly subscription renewals, collections, and outstanding dues.",
-  type: "PDF",
-},
-    {
-      title: "Active Organization Audit",
-      description:
-        "Summary of active client workspaces, user growth trends, and activity log overview.",
-      type: "CSV",
-    },
-    // ...rest of your reports
-  ];
+  {
+    title: "Monthly Financial Statement",
+    description:
+      "Comprehensive financial report covering revenue, payments, invoices, renewals, and subscription performance.",
+    type: "PDF",
+  },
+  {
+    title: "Active Organization Audit",
+    description:
+      "Detailed report of organizations, subscription plans, administrators, account status, and operational insights.",
+    type: "PDF",
+  },
+];
+ 
+if (loading) {
+  return (
+    <div className="flex items-center justify-center h-[70vh]">
+      <div className="flex flex-col items-center gap-4">
+        <div className="h-10 w-10 rounded-full border-4 border-blue-600 border-t-transparent animate-spin" />
+        <p className="text-slate-500 font-medium">
+          Loading Reports...
+        </p>
+      </div>
+    </div>
+  );
+}
 
   return (
     <>
@@ -90,14 +86,6 @@ export default function Reports() {
     <option value="year">This Year</option>
   </select>
 
-  <div className="flex items-center gap-3">
-    <button
-      onClick={loadReport}
-      className="px-4 py-2 rounded-xl bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition"
-    >
-      Refresh
-    </button>
-</div>
 
 </div>
 
@@ -225,7 +213,7 @@ export default function Reports() {
 
   </div>
 )}
- {!loading && report && (
+ {report && (
   <div className="grid gap-6 lg:grid-cols-2">
 
     {/* Revenue Trend */}
