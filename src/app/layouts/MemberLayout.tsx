@@ -60,6 +60,8 @@ export default function MemberLayout() {
         ]
       : [
           { to: "/student/dashboard", icon: "📚", label: "Dashboard" },
+          { to: "/student/attendance", icon: "📅", label: "Attendance" },
+          { to: "/student/results", icon: "🏆", label: "Results" },
           { to: "/student/courses", icon: "🔍", label: "Explore Courses" },
           { to: "/student/my-courses", icon: "🎓", label: "My Courses" },
           { to: "/student/notifications", icon: "🔔", label: "Notifications" },

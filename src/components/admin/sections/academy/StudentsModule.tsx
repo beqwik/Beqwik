@@ -1,5 +1,7 @@
-import { Users, UserPlus, Mail, Phone, Trash2, FileSpreadsheet } from "lucide-react";
+import { useState } from "react";
+import { Users, UserPlus, Mail, Phone, Trash2, FileSpreadsheet, Search } from "lucide-react";
 import type { Student } from "../../../../services/organization/academyService";
+import { HighlightText } from "../../../common/HighlightText";
 
 interface StudentsModuleProps {
   students: Student[];
@@ -9,6 +11,13 @@ interface StudentsModuleProps {
 }
 
 export default function StudentsModule({ students, onAddStudent, onDeleteStudent, onUploadStudentsList }: StudentsModuleProps) {
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const filteredStudents = students.filter(std => 
+    (std.full_name || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (std.student_code || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (std.email || "").toLowerCase().includes(searchQuery.toLowerCase())
+  );
   return (
     <div className="bg-white rounded-[20px] border border-slate-100 p-6 shadow-sm space-y-6">
       <div className="flex justify-between items-center flex-wrap gap-3">
@@ -18,7 +27,17 @@ export default function StudentsModule({ students, onAddStudent, onDeleteStudent
           </h2>
           <p className="text-slate-500 text-xs font-medium">Manage student registrations</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <div className="relative flex-1 sm:w-60">
+            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search students..."
+              className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-[12px] text-xs font-semibold text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-600 transition"
+            />
+          </div>
           {onUploadStudentsList && (
             <button
               onClick={onUploadStudentsList}
@@ -40,6 +59,7 @@ export default function StudentsModule({ students, onAddStudent, onDeleteStudent
         <table className="w-full text-left text-xs text-slate-700">
           <thead className="bg-slate-50 border-b border-slate-100 text-slate-400 font-bold uppercase">
             <tr>
+              <th className="px-4 py-3 w-16 text-center">Sr. No.</th>
               <th className="px-4 py-3">Student ID</th>
               <th className="px-4 py-3">Student Name</th>
               <th className="px-4 py-3">Contact</th>
@@ -48,12 +68,18 @@ export default function StudentsModule({ students, onAddStudent, onDeleteStudent
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 font-medium">
-            {students.map(std => (
-              <tr key={std.id} className="hover:bg-slate-50 transition">
-                <td className="px-4 py-3 font-mono font-bold text-indigo-600">{std.student_code}</td>
-                <td className="px-4 py-3 font-bold text-slate-900">{std.full_name}</td>
+            {filteredStudents.length > 0 ? (
+              filteredStudents.map((std, index) => (
+                <tr key={std.id} className="hover:bg-slate-50 transition">
+                <td className="px-4 py-3 text-center text-slate-400 font-bold">{index + 1}</td>
+                <td className="px-4 py-3 font-mono font-bold text-indigo-600">
+                  <HighlightText text={std.student_code} highlight={searchQuery} />
+                </td>
+                <td className="px-4 py-3 font-bold text-slate-900">
+                  <HighlightText text={std.full_name} highlight={searchQuery} />
+                </td>
                 <td className="px-4 py-3 space-y-0.5">
-                  <div className="flex items-center gap-1"><Mail className="w-3 h-3 text-slate-400" /> {std.email}</div>
+                  <div className="flex items-center gap-1"><Mail className="w-3 h-3 text-slate-400" /> <HighlightText text={std.email} highlight={searchQuery} /></div>
                   {std.phone && <div className="flex items-center gap-1 text-slate-400"><Phone className="w-3 h-3" /> {std.phone}</div>}
                 </td>
                 <td className="px-4 py-3">
@@ -65,7 +91,14 @@ export default function StudentsModule({ students, onAddStudent, onDeleteStudent
                   </button>
                 </td>
               </tr>
-            ))}
+            ))
+            ) : (
+              <tr>
+                <td colSpan={5} className="px-4 py-8 text-center text-slate-400 font-medium">
+                  No students found.
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>

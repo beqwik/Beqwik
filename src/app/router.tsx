@@ -30,6 +30,8 @@ import MemberNotifications from "../pages/member/Notifications";
 import ExploreCourses from "../pages/member/ExploreCourses";
 import MyCourses from "../pages/member/MyCourses";
 import LectureSchedule from "../pages/member/LectureSchedule";
+import StudentAttendance from "../pages/member/StudentAttendance";
+import StudentResults from "../pages/member/StudentResults";
 
 import SuperAdminLogin from "../pages/superAdmin/SuperAdminLogin";
 import SuperAdminDashboard from "../pages/superAdmin/Dashboard";
@@ -140,6 +142,16 @@ export default function AppRouter() {
         <Route
           path="/student/dashboard"
           element={<MemberDashboard />}
+        />
+
+        <Route
+          path="/student/attendance"
+          element={<StudentAttendance />}
+        />
+
+        <Route
+          path="/student/results"
+          element={<StudentResults />}
         />
 
         <Route

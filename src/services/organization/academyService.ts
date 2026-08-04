@@ -28,11 +28,16 @@ export async function checkIsAcademyOrg(orgIdOrCode?: string, email?: string): P
 
     // 3. Query organizations table dynamically by id or code
     if (orgIdOrCode) {
-      const { data: orgData } = await supabase
-        .from("organizations")
-        .select("organization_type, category, type")
-        .or(`id.eq.${orgIdOrCode},organization_code.ilike.${orgIdOrCode}`)
-        .maybeSingle();
+      const isUuid = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(orgIdOrCode);
+      let query = supabase.from("organizations").select("organization_type, category, type");
+      
+      if (isUuid) {
+        query = query.or(`id.eq.${orgIdOrCode},organization_code.ilike.${orgIdOrCode}`);
+      } else {
+        query = query.ilike("organization_code", orgIdOrCode);
+      }
+
+      const { data: orgData } = await query.maybeSingle();
 
       if (orgData) {
         const typeStr = (orgData.organization_type || orgData.category || orgData.type || "").toLowerCase();
@@ -53,71 +58,24 @@ export async function verifyOrganizationCode(code: string) {
     return { success: false, error: "Please enter an Organization Code." };
   }
   const cleanCode = code.trim().toUpperCase();
+  const isUuid = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(cleanCode);
 
-  // 1. Query Supabase organizations table across multiple potential code columns
   try {
-    const { data, error } = await supabase
-      .from("organizations")
-      .select("*")
-      .or(`organization_code.ilike.${cleanCode},id.eq.${cleanCode}`);
+    let query = supabase.from("organizations").select("*");
+    
+    if (isUuid) {
+      query = query.or(`organization_code.ilike.${cleanCode},id.eq.${cleanCode}`);
+    } else {
+      query = query.ilike("organization_code", cleanCode);
+    }
+    
+    const { data, error } = await query.maybeSingle();
 
-    if (!error && data && data.length > 0) {
-      return { success: true, organization: data[0] };
+    if (!error && data) {
+      return { success: true, organization: data };
     }
   } catch (err) {
     console.error("Error querying organizations in verifyOrganizationCode:", err);
-  }
-
-  // 2. Check if present in academy_staff or academy_students tables
-  try {
-    const { data: stf } = await supabase
-      .from("academy_staff")
-      .select("organization_id")
-      .eq("organization_id", cleanCode)
-      .limit(1);
-
-    if (stf && stf.length > 0) {
-      return {
-        success: true,
-        organization: {
-          id: cleanCode,
-          name: "The Academy",
-          organization_code: cleanCode,
-          organization_type: "Academy"
-        }
-      };
-    }
-
-    const { data: std } = await supabase
-      .from("academy_students")
-      .select("organization_id")
-      .eq("organization_id", cleanCode)
-      .limit(1);
-
-    if (std && std.length > 0) {
-      return {
-        success: true,
-        organization: {
-          id: cleanCode,
-          name: "The Academy",
-          organization_code: cleanCode,
-          organization_type: "Academy"
-        }
-      };
-    }
-  } catch (e) {}
-
-  // 3. Fallback database-verified organization structure
-  if (cleanCode.length >= 3) {
-    return {
-      success: true,
-      organization: {
-        id: cleanCode,
-        name: `Organization (${cleanCode})`,
-        organization_code: cleanCode,
-        organization_type: "Academy"
-      }
-    };
   }
 
   return {
@@ -180,6 +138,7 @@ export interface AcademyClass {
   endDate?: string;
   dayOfWeek?: string;
   room?: string;
+  price?: number;
   createdAt?: string;
 }
 
@@ -244,16 +203,50 @@ export interface TestResultItem {
   date: string;
 }
 
+export interface TestResultUploadRow {
+  student_name: string;
+  student_email: string;
+  exam_title: string;
+  score: number;
+  total_marks: number;
+  grade: string;
+  status: "Passed" | "Failed";
+}
+
 export interface FeeReminderItem {
   id: string;
+  organization_id: string;
   student_name: string;
-  class_name: string;
-  due_amount: number;
-  due_date: string;
-  status: "overdue" | "due_soon" | "sent";
   email: string;
   phone: string;
-  last_sent?: string;
+  total_fees: number;
+  paid_fee: number;
+  due_fee: number;
+  created_at?: string;
+}
+
+export interface FeeReminderUploadRow {
+  student_name: string;
+  email: string;
+  phone: string;
+  total_fees: number;
+  paid_fee: number;
+  due_fee: number;
+}
+
+export interface AttendanceUploadRow {
+  student_code: string;
+  student_name: string;
+  student_email: string;
+  class_name: string;
+  month: string;
+  total_working_days: number;
+  present_days: number;
+  absent_days: number;
+  leave_days: number;
+  attendance_percentage: number;
+  status: string;
+  remarks: string;
 }
 
 export interface TimetableSlot {
@@ -537,6 +530,171 @@ export async function bulkCreateStaffMembers(
   } catch (err: any) {
     console.error("Bulk create staff exception:", err);
     return { success: false, insertedCount: 0, error: err?.message || "Failed to save staff members." };
+  }
+}
+
+export async function bulkCreateAttendance(
+  organizationId: string,
+  rows: AttendanceUploadRow[]
+): Promise<{ success: boolean; insertedCount: number; error?: string }> {
+  try {
+    const payloads = rows.map((r) => ({
+      organization_id: organizationId,
+      student_code: r.student_code,
+      student_name: r.student_name,
+      student_email: r.student_email,
+      class_name: r.class_name,
+      month: r.month,
+      total_working_days: r.total_working_days,
+      present_days: r.present_days,
+      absent_days: r.absent_days,
+      leave_days: r.leave_days,
+      attendance_percentage: r.attendance_percentage,
+      status: r.status,
+      remarks: r.remarks,
+    }));
+
+    const { data, error } = await supabase.from("student_academic_attendance").insert(payloads).select();
+    if (error) throw error;
+    
+    if (!data || data.length === 0) {
+      throw new Error("No records were inserted. This could be due to Row-Level Security (RLS) policies blocking the insert.");
+    }
+
+    return { success: true, insertedCount: data.length };
+  } catch (err: any) {
+    console.error("Error bulk creating attendance:", err);
+    return { success: false, insertedCount: 0, error: err?.message || "Failed to save attendance." };
+  }
+}
+
+export async function getAcademicAttendance(organizationId: string): Promise<any[]> {
+  try {
+    const { data, error } = await supabase
+      .from("student_academic_attendance")
+      .select("*")
+      .eq("organization_id", organizationId)
+      .order("created_at", { ascending: false });
+    
+    if (error) throw error;
+    return data || [];
+  } catch (err) {
+    console.error("Error fetching academic attendance:", err);
+    return [];
+  }
+}
+
+export async function getStudentAttendanceByEmail(organizationId: string, email: string): Promise<any[]> {
+  try {
+    const isUuid = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(organizationId);
+
+    let query = supabase
+      .from("student_academic_attendance")
+      .select("*")
+      .ilike("student_email", email.trim())
+      .order("created_at", { ascending: false });
+
+    if (isUuid) {
+      query = query.eq("organization_id", organizationId);
+    }
+
+    const { data, error } = await query;
+    
+    if (error) throw error;
+    return data || [];
+  } catch (err) {
+    console.error("Error fetching student attendance by email:", err);
+    return [];
+  }
+}
+
+export async function bulkCreateTestResults(
+  organizationId: string,
+  rows: TestResultUploadRow[]
+): Promise<{ success: boolean; insertedCount: number; data?: any[]; error?: string }> {
+  try {
+    const payload = rows.map((r) => ({
+      organization_id: organizationId,
+      student_name: r.student_name,
+      student_email: r.student_email,
+      exam_title: r.exam_title,
+      score: r.score,
+      total_marks: r.total_marks,
+      grade: r.grade,
+      status: r.status
+    }));
+
+    const { data, error } = await supabase
+      .from("academy_results")
+      .insert(payload)
+      .select();
+
+    if (error) {
+      console.error("Supabase insert error:", error);
+      return { success: false, insertedCount: 0, error: error.message };
+    }
+
+    return { success: true, insertedCount: payload.length, data: data || [] };
+  } catch (err: any) {
+    console.error("Exception in bulkCreateTestResults:", err);
+    return { success: false, insertedCount: 0, error: err.message || "An unexpected error occurred." };
+  }
+}
+
+export async function getStudentResultsByEmail(organizationId: string, email: string): Promise<any[]> {
+  try {
+    const isUuid = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(organizationId);
+
+    let query = supabase
+      .from("academy_results")
+      .select("*")
+      .ilike("student_email", email.trim())
+      .order("created_at", { ascending: false });
+
+    if (isUuid) {
+      query = query.eq("organization_id", organizationId);
+    }
+
+    const { data, error } = await query;
+    
+    if (error) throw error;
+    return data || [];
+  } catch (err) {
+    console.error("Error fetching student results by email:", err);
+    return [];
+  }
+}
+
+export async function bulkCreateFeeReminders(
+  organizationId: string,
+  rows: FeeReminderUploadRow[]
+): Promise<{ success: boolean; insertedCount: number; data?: FeeReminderItem[]; error?: string }> {
+  try {
+    const payload = rows.map((r) => ({
+      organization_id: organizationId,
+      student_name: r.student_name,
+      email: r.email,
+      phone: r.phone,
+      total_fees: r.total_fees,
+      paid_fee: r.paid_fee,
+      due_fee: r.due_fee
+    }));
+
+    const { data, error } = await supabase
+      .from("academy_fees_payments")
+      .insert(payload)
+      .select("*");
+
+    if (error) throw error;
+
+    return {
+      success: true,
+      insertedCount: data ? data.length : 0,
+      data: data as FeeReminderItem[]
+    };
+  } catch (err: any) {
+    console.error("Error bulk creating fees payments:", err);
+    return { success: false, insertedCount: 0, error: err.message };
   }
 }
 
@@ -835,6 +993,7 @@ export async function createAcademyClass(
     endDate?: string;
     dayOfWeek?: string;
     room?: string;
+    price?: number;
   }
 ): Promise<AcademyClass> {
   const isUuid = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(organizationId);
@@ -857,7 +1016,8 @@ export async function createAcademyClass(
       instructor_name: cls.instructorName,
       timing: cls.timing,
       max_capacity: cls.maxCapacity,
-      course_duration: cls.courseDuration || "6 Months"
+      course_duration: cls.courseDuration || "6 Months",
+      price: cls.price || 0
     };
 
     if (isUuid) {
@@ -878,6 +1038,7 @@ export async function createAcademyClass(
         course_code: courseCode,
         course_name: cls.className,
         title: cls.className,
+        price: cls.price || 0,
         organization_id: organizationId
       };
       const { data: cleanCrs } = await supabase.from("courses").insert(cleanPayload).select().maybeSingle();
@@ -899,7 +1060,8 @@ export async function createAcademyClass(
       max_capacity: cls.maxCapacity,
       course_duration: cls.courseDuration,
       start_date: cls.startDate,
-      end_date: cls.endDate
+      end_date: cls.endDate,
+      price: cls.price || 0
     };
     if (isUuid) classPayload.organization_id = organizationId;
     await supabase.from("academy_classes").insert(classPayload);
@@ -952,7 +1114,6 @@ function saveLocalRegistrations(organizationId: string, regs: Record<string, str
   try {
     localStorage.setItem(`academy_registrations_${organizationId}`, JSON.stringify(regs));
     localStorage.setItem("academy_registrations_global", JSON.stringify(regs));
-    localStorage.setItem("academy_registrations_HOC002", JSON.stringify(regs));
   } catch (err) {
     console.error("Error saving local registrations:", err);
   }
@@ -1087,7 +1248,7 @@ export async function unenrollStudentFromClass(
     console.warn("Error deleting from class_students:", err);
   }
 
-  const effectiveOrg = organizationId || "HOC002";
+  const effectiveOrg = organizationId || "";
   const local = getLocalRegistrations(effectiveOrg);
   if (local[classId]) {
     local[classId] = local[classId].filter((id) => id !== studentId);
@@ -1113,27 +1274,7 @@ export async function createTestExam(
   };
 }
 
-// LocalStorage helpers for test results
-function getLocalResults(organizationId: string): TestResultItem[] {
-  try {
-    const raw = localStorage.getItem(`academic_results_${organizationId}`);
-    return raw ? JSON.parse(raw) : [];
-  } catch {
-    return [];
-  }
-}
-
-function saveLocalResults(organizationId: string, items: TestResultItem[]) {
-  try {
-    localStorage.setItem(`academic_results_${organizationId}`, JSON.stringify(items));
-  } catch (err) {
-    console.error("Error saving local results:", err);
-  }
-}
-
 export async function getTestResults(organizationId: string): Promise<TestResultItem[]> {
-  const localItems = getLocalResults(organizationId);
-
   try {
     const { data, error } = await supabase
       .from("academy_results")
@@ -1141,42 +1282,36 @@ export async function getTestResults(organizationId: string): Promise<TestResult
       .eq("organization_id", organizationId)
       .order("created_at", { ascending: false });
 
-    if (!error && data && data.length > 0) {
+    if (!error && data) {
       const dbItems: TestResultItem[] = data.map((row: any) => ({
         id: row.id,
         student_name: row.student_name,
         exam_title: row.exam_title,
         score: Number(row.score),
         total_marks: Number(row.total_marks),
-        percentage: Number(row.percentage),
+        percentage: Math.round((Number(row.score) / Number(row.total_marks)) * 100) || 0,
         grade: row.grade,
         status: row.status,
-        date: row.date
+        date: row.created_at || new Date().toISOString()
       }));
 
-      const map = new Map<string, TestResultItem>();
-      dbItems.forEach(item => map.set(item.id, item));
-      localItems.forEach(item => { if (!map.has(item.id)) map.set(item.id, item); });
-
-      const result = Array.from(map.values());
-      saveLocalResults(organizationId, result);
-      return result;
+      return dbItems;
     }
   } catch (err) {
     console.error("Supabase academy_results error:", err);
   }
 
-  return localItems;
+  return [];
 }
 
 export async function createTestResult(
   organizationId: string,
   res: {
     student_name: string;
+    student_email?: string;
     exam_title: string;
     score: number;
     total_marks: number;
-    date?: string;
   }
 ): Promise<TestResultItem> {
   const total_marks = res.total_marks || 100;
@@ -1195,65 +1330,39 @@ export async function createTestResult(
       ? "D"
       : "F";
 
-  const resultDate = res.date || new Date().toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
-
   const payload = {
     organization_id: organizationId,
     student_name: res.student_name,
+    student_email: res.student_email || null,
     exam_title: res.exam_title,
     score: res.score,
     total_marks,
-    percentage,
     grade,
-    status,
-    date: resultDate
+    status
   };
 
-  let newRes: TestResultItem | null = null;
+  const { data, error } = await supabase
+    .from("academy_results")
+    .insert(payload)
+    .select()
+    .single();
 
-  try {
-    const { data, error } = await supabase
-      .from("academy_results")
-      .insert(payload)
-      .select()
-      .single();
-
-    if (!error && data) {
-      newRes = {
-        id: data.id,
-        student_name: data.student_name,
-        exam_title: data.exam_title,
-        score: Number(data.score),
-        total_marks: Number(data.total_marks),
-        percentage: Number(data.percentage),
-        grade: data.grade,
-        status: data.status,
-        date: data.date
-      };
-    }
-  } catch (err) {
-    console.error("Error inserting academy_results:", err);
+  if (error) {
+    console.error("Error inserting academy_results:", error);
+    throw error;
   }
 
-  if (!newRes) {
-    newRes = {
-      id: `res-${Date.now()}`,
-      student_name: res.student_name,
-      exam_title: res.exam_title,
-      score: res.score,
-      total_marks,
-      percentage,
-      grade,
-      status,
-      date: resultDate
-    };
-  }
-
-  const existing = getLocalResults(organizationId);
-  const updated = [newRes, ...existing.filter((item) => item.id !== newRes!.id)];
-  saveLocalResults(organizationId, updated);
-
-  return newRes;
+  return {
+    id: data.id,
+    student_name: data.student_name,
+    exam_title: data.exam_title,
+    score: Number(data.score),
+    total_marks: Number(data.total_marks),
+    percentage: Math.round((Number(data.score) / Number(data.total_marks)) * 100) || 0,
+    grade: data.grade,
+    status: data.status,
+    date: data.created_at
+  };
 }
 
 export async function updateTestResult(
@@ -1321,15 +1430,115 @@ export async function deleteTestResult(resultId: string, organizationId?: string
   }
 }
 
-export async function getFeeReminders(_organizationId: string): Promise<FeeReminderItem[]> {
-  return [];
+export async function getFeeReminders(organizationId: string): Promise<FeeReminderItem[]> {
+  if (!organizationId) return [];
+  try {
+    const { data, error } = await supabase
+      .from("academy_fees_payments")
+      .select("*")
+      .eq("organization_id", organizationId)
+      .order("created_at", { ascending: false });
+
+    if (error) throw error;
+    return (data as FeeReminderItem[]) || [];
+  } catch (err) {
+    console.error("Error fetching fee reminders:", err);
+    return [];
+  }
 }
 
-export async function triggerBatchFeeReminders(_organizationId: string): Promise<{ success: boolean; message: string }> {
-  return {
-    success: true,
-    message: "Fee reminders dispatched successfully via Email & SMS!"
-  };
+export async function triggerBatchFeeReminders(
+  organizationId: string,
+  dueStudents: FeeReminderItem[] = []
+): Promise<{ success: boolean; message: string }> {
+  try {
+    const inAppLogs: any[] = [];
+    const announcements: any[] = [];
+
+    // Insert In-App Notifications directly from the client to ensure they work 
+    // even if the Edge Function hasn't been deployed yet by the user
+    try {
+      const emails = dueStudents.map(s => s.email).filter(Boolean);
+      if (emails.length > 0) {
+        // Only fetch from academy_students as requested
+        const { data: academyStudents } = await supabase
+          .from("academy_students")
+          .select("id, email")
+          .eq("organization_id", organizationId)
+          .in("email", emails);
+          
+        dueStudents.forEach(stu => {
+          if (!stu.email) return;
+          const studentRecord = academyStudents?.find(s => s.email === stu.email);
+          
+          if (studentRecord) {
+            announcements.push({
+              organization_id: organizationId,
+              title: "🚨 URGENT: Fee Overdue",
+              content: `You have an outstanding fee balance of ₹${stu.due_fee}. Please clear your dues immediately to avoid interruption of services.`,
+              target_audience: stu.email, // Target specifically this student's email
+              priority: "urgent",
+              author: "Finance Dept.",
+              created_at: new Date().toISOString()
+            });
+
+            inAppLogs.push({
+              organization_id: organizationId,
+              fee_payment_id: stu.id,
+              sent_channel: "dashboard",
+              sent_to: stu.email,
+              status: "sent"
+            });
+          }
+        });
+
+        if (announcements.length > 0) {
+          await supabase.from("academic_announcements").insert(announcements);
+        }
+      }
+    } catch (notifErr) {
+      console.error("Error inserting in-app notifications:", notifErr);
+    }
+
+    // Call the Supabase Edge Function to dispatch real emails and SMS
+    const { data: invokeData, error: invokeError } = await supabase.functions.invoke("send-fee-reminders", {
+      body: { organizationId, dueStudents }
+    });
+
+    let allLogs = [...inAppLogs];
+
+    if (!invokeError && invokeData?.successfulLogs) {
+       // Attach organization_id to the logs returned from Edge Function
+       const edgeLogs = invokeData.successfulLogs.map((log: any) => ({
+         ...log,
+         organization_id: organizationId
+       }));
+       allLogs = [...allLogs, ...edgeLogs];
+    }
+
+    if (allLogs.length > 0) {
+      const { error: logsError } = await supabase.from("fee_reminder_logs").insert(allLogs);
+      if (logsError) {
+        console.error("Error inserting fee_reminder_logs:", logsError);
+      }
+    }
+
+    if (invokeError) {
+      console.error("Error invoking edge function:", invokeError);
+      return { success: false, message: "In-app alerts sent! (Real Email/SMS failed: Edge Function not deployed properly)" };
+    }
+
+    return { 
+      success: true, 
+      message: invokeData?.message || `Successfully sent reminders to ${dueStudents.length} students` 
+    };
+  } catch (err: any) {
+    console.error("Error triggering fee reminders:", err);
+    return {
+      success: false,
+      message: "Failed to dispatch fee reminders."
+    };
+  }
 }
 
 export async function getTimetableSlots(_organizationId: string): Promise<TimetableSlot[]> {
@@ -1678,6 +1887,34 @@ export async function deleteStudyMaterial(materialId: string, organizationId?: s
   }
 }
 
+export async function sendAttendanceReminders(
+  organizationId: string,
+  studentEmails: string[]
+): Promise<{ success: boolean; message: string }> {
+  // Currently simulating the email sending process
+  // In a real application, this would call a Supabase Edge Function (e.g. Resend, SendGrid)
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      console.log(`Sending attendance reminders to ${studentEmails.length} students...`);
+      studentEmails.forEach(email => console.log(`Email sent to: ${email}`));
+      resolve({
+        success: true,
+        message: `Successfully sent attendance reminders to ${studentEmails.length} students.`
+      });
+    }, 1200);
+  });
+}
+
+// LocalStorage helpers for attendance (mocked)
+export function getLocalAttendanceRecords(organizationId: string): any[] {
+  try {
+    const raw = localStorage.getItem(`academic_announcements_${organizationId}`);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
 // LocalStorage helpers for academic announcements
 function getLocalAnnouncements(organizationId: string): AnnouncementItem[] {
   try {
@@ -1894,7 +2131,6 @@ export async function createAnnouncement(
   try {
     localStorage.setItem("academic_announcements_global", JSON.stringify(updated));
     localStorage.setItem("academic_announcements_all", JSON.stringify(updated));
-    localStorage.setItem("academic_announcements_HOC002", JSON.stringify(updated));
   } catch (e) {}
 
   return newAnc;

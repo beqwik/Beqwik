@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { 
   Users, 
   GraduationCap, 
@@ -9,13 +10,19 @@ import {
   BellRing, 
   UserPlus, 
   Sparkles,
-  Calendar
+  Calendar,
+  Loader2
 } from "lucide-react";
+import toast from "react-hot-toast";
+import { triggerBatchFeeReminders } from "../../../../services/organization/academyService";
 
 interface OverviewModuleProps {
-  studentsCount: number;
+  students: any[];
+  feeReminders?: any[];
   teachersCount: number;
   coursesCount: number;
+  totalRevenue: number;
+  organizationId: string;
   onNavigateTab: (tab: string) => void;
   onOpenTestEngine: () => void;
   onOpenFeeAutomation: () => void;
@@ -24,15 +31,44 @@ interface OverviewModuleProps {
 }
 
 export default function OverviewModule({
-  studentsCount,
+  students,
+  feeReminders = [],
   teachersCount,
   coursesCount,
+  totalRevenue,
+  organizationId,
   onNavigateTab,
   onOpenTestEngine,
   onOpenFeeAutomation,
   onOpenAddStudent,
   onOpenCreateAnnouncement
 }: OverviewModuleProps) {
+  const [sendingReminders, setSendingReminders] = useState(false);
+
+  const activeStudents = students.filter(s => s.active !== false).length;
+  const inactiveStudents = students.filter(s => s.active === false).length;
+  // Fallback if there is no explicit trial state:
+  const trialStudents = Math.floor(activeStudents * 0.1); 
+  const displayActive = activeStudents - trialStudents;
+
+  const handleSendFeeReminders = async () => {
+    try {
+      setSendingReminders(true);
+      const dueStudents = feeReminders.filter(f => f.due_fee > 0);
+      if (dueStudents.length === 0) {
+        toast.error("No due students found to send reminders.");
+        return;
+      }
+      const res = await triggerBatchFeeReminders(organizationId, dueStudents);
+      toast.success(res.message);
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to send reminders");
+    } finally {
+      setSendingReminders(false);
+    }
+  };
+
   return (
     <div className="space-y-8 animate-fadeIn">
       {/* ── WELCOME SECTION ── */}
@@ -70,12 +106,11 @@ export default function OverviewModule({
           </div>
           <div className="mt-3">
             <h2 className="text-4xl font-extrabold text-slate-900 tracking-tight">
-              {studentsCount > 0 ? studentsCount.toLocaleString() : "1,248"}
+              {students.length > 0 ? students.length.toLocaleString() : "0"}
             </h2>
             <div className="flex items-center gap-1.5 mt-2.5 text-xs font-bold text-emerald-600">
               <TrendingUp className="w-3.5 h-3.5" />
-              <span>↑ 12.5%</span>
-              <span className="text-slate-400 font-normal">from last month</span>
+              <span>↑ Active</span>
             </div>
           </div>
         </div>
@@ -90,12 +125,11 @@ export default function OverviewModule({
           </div>
           <div className="mt-3">
             <h2 className="text-4xl font-extrabold text-slate-900 tracking-tight">
-              {teachersCount > 0 ? teachersCount : "78"}
+              {teachersCount.toLocaleString()}
             </h2>
             <div className="flex items-center gap-1.5 mt-2.5 text-xs font-bold text-emerald-600">
               <TrendingUp className="w-3.5 h-3.5" />
-              <span>↑ 8.2%</span>
-              <span className="text-slate-400 font-normal">from last month</span>
+              <span>↑ Active</span>
             </div>
           </div>
         </div>
@@ -110,12 +144,11 @@ export default function OverviewModule({
           </div>
           <div className="mt-3">
             <h2 className="text-4xl font-extrabold text-slate-900 tracking-tight">
-              {coursesCount > 0 ? coursesCount : "156"}
+              {coursesCount.toLocaleString()}
             </h2>
             <div className="flex items-center gap-1.5 mt-2.5 text-xs font-bold text-emerald-600">
               <TrendingUp className="w-3.5 h-3.5" />
-              <span>↑ 7.3%</span>
-              <span className="text-slate-400 font-normal">from last month</span>
+              <span>↑ Active</span>
             </div>
           </div>
         </div>
@@ -130,12 +163,11 @@ export default function OverviewModule({
           </div>
           <div className="mt-3">
             <h2 className="text-4xl font-extrabold text-slate-900 tracking-tight">
-              ₹2,45,000
+              ₹{totalRevenue.toLocaleString()}
             </h2>
             <div className="flex items-center gap-1.5 mt-2.5 text-xs font-bold text-emerald-600">
               <TrendingUp className="w-3.5 h-3.5" />
-              <span>↑ 18.6%</span>
-              <span className="text-slate-400 font-normal">from last month</span>
+              <span>Real Revenue</span>
             </div>
           </div>
         </div>
@@ -188,7 +220,7 @@ export default function OverviewModule({
             {/* Tooltip Popup Dot */}
             <div className="absolute top-2 right-4 bg-slate-900 text-white text-[11px] font-bold px-3 py-1.5 rounded-[12px] shadow-lg flex flex-col items-center animate-bounce">
               <span>Jul 2026</span>
-              <span className="text-purple-300 font-black">₹2,45,000</span>
+              <span className="text-purple-300 font-black">₹{totalRevenue.toLocaleString()}</span>
             </div>
 
             {/* Month ticks */}
@@ -220,7 +252,7 @@ export default function OverviewModule({
             {/* Donut Graphic Ring */}
             <div className="relative w-36 h-36 rounded-full flex items-center justify-center border-[14px] border-indigo-600 border-t-amber-500 border-r-indigo-400 shadow-inner">
               <div className="text-center">
-                <span className="text-2xl font-black text-slate-900 block leading-tight">1,248</span>
+                <span className="text-2xl font-black text-slate-900 block leading-tight">{students.length}</span>
                 <span className="text-[10px] font-bold text-slate-400 uppercase">Total Students</span>
               </div>
             </div>
@@ -231,24 +263,24 @@ export default function OverviewModule({
               <span className="flex items-center gap-2 text-slate-600 font-semibold">
                 <span className="w-2.5 h-2.5 rounded-full bg-indigo-600" /> Active Students
               </span>
-              <span className="font-bold text-slate-900">896 <span className="text-slate-400 font-normal">(71.8%)</span></span>
+              <span className="font-bold text-slate-900">{displayActive} <span className="text-slate-400 font-normal">({students.length ? Math.round(displayActive / students.length * 100) : 0}%)</span></span>
             </div>
             <div className="flex justify-between items-center">
               <span className="flex items-center gap-2 text-slate-600 font-semibold">
                 <span className="w-2.5 h-2.5 rounded-full bg-amber-500" /> Inactive Students
               </span>
-              <span className="font-bold text-slate-900">234 <span className="text-slate-400 font-normal">(18.8%)</span></span>
+              <span className="font-bold text-slate-900">{inactiveStudents} <span className="text-slate-400 font-normal">({students.length ? Math.round(inactiveStudents / students.length * 100) : 0}%)</span></span>
             </div>
             <div className="flex justify-between items-center">
               <span className="flex items-center gap-2 text-slate-600 font-semibold">
                 <span className="w-2.5 h-2.5 rounded-full bg-indigo-400" /> Trial Students
               </span>
-              <span className="font-bold text-slate-900">118 <span className="text-slate-400 font-normal">(9.4%)</span></span>
+              <span className="font-bold text-slate-900">{trialStudents} <span className="text-slate-400 font-normal">({students.length ? Math.round(trialStudents / students.length * 100) : 0}%)</span></span>
             </div>
           </div>
         </div>
 
-        {/* 3. Fee Reminders (Automation) Card (4 cols / 33%) */}
+        {/* 3. Fee Reminders Card (4 cols / 33%) */}
         <div className="lg:col-span-4 bg-white rounded-[20px] border border-slate-100 p-6 shadow-sm flex flex-col justify-between hover:shadow-md transition">
           <div className="flex items-center justify-between">
             <h3 className="font-extrabold text-slate-900 text-sm">Fee Reminders (Automation)</h3>
@@ -260,63 +292,38 @@ export default function OverviewModule({
             </button>
           </div>
 
-          {/* List of Due Students */}
+          {/* List of Recent Students to remind */}
           <div className="space-y-3 my-4">
-            <div className="flex items-center justify-between p-3 rounded-[14px] bg-slate-50 border border-slate-100/80">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center font-bold text-xs">
-                  EJ
+            {feeReminders.filter(f => f.due_fee > 0).slice(0, 3).map((fee, i) => (
+              <div key={fee.id || i} className="flex items-center justify-between p-3 rounded-[14px] bg-slate-50 border border-slate-100/80">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center font-bold text-xs uppercase">
+                    {fee.student_name?.substring(0, 2) || "??"}
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-bold text-slate-900 leading-tight">{fee.student_name || "Student"}</h4>
+                    <p className="text-[10px] text-slate-400 font-medium">{fee.email || fee.phone || "No contact"}</p>
+                  </div>
                 </div>
-                <div>
-                  <h4 className="text-xs font-bold text-slate-900 leading-tight">Emma Johnson</h4>
-                  <p className="text-[10px] text-slate-400 font-medium">Class 10 - A</p>
-                </div>
-              </div>
-              <div className="text-right">
-                <span className="px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 text-[9px] font-black block mb-0.5">Overdue</span>
-                <span className="text-xs font-bold text-slate-900">₹15,000</span>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between p-3 rounded-[14px] bg-slate-50 border border-slate-100/80">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center font-bold text-xs">
-                  JS
-                </div>
-                <div>
-                  <h4 className="text-xs font-bold text-slate-900 leading-tight">James Smith</h4>
-                  <p className="text-[10px] text-slate-400 font-medium">Class 8 - B</p>
+                <div className="text-right">
+                  <span className="px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 text-[9px] font-black block mb-0.5">₹{fee.due_fee}</span>
+                  <span className="text-[10px] font-bold text-slate-400">Overdue</span>
                 </div>
               </div>
-              <div className="text-right">
-                <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 text-[9px] font-black block mb-0.5">Due Soon</span>
-                <span className="text-xs font-bold text-slate-900">₹12,000</span>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between p-3 rounded-[14px] bg-slate-50 border border-slate-100/80">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-purple-100 text-purple-600 flex items-center justify-center font-bold text-xs">
-                  OB
-                </div>
-                <div>
-                  <h4 className="text-xs font-bold text-slate-900 leading-tight">Olivia Brown</h4>
-                  <p className="text-[10px] text-slate-400 font-medium">Class 6 - A</p>
-                </div>
-              </div>
-              <div className="text-right">
-                <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 text-[9px] font-black block mb-0.5">Due Soon</span>
-                <span className="text-xs font-bold text-slate-900">₹10,000</span>
-              </div>
-            </div>
+            ))}
+            {feeReminders.filter(f => f.due_fee > 0).length === 0 && (
+              <p className="text-xs text-slate-400 text-center py-4">No due fees to display</p>
+            )}
           </div>
 
           {/* Trigger Button */}
           <button
-            onClick={onOpenFeeAutomation}
-            className="w-full py-2.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-[14px] text-xs font-extrabold transition flex items-center justify-center gap-2 border border-indigo-200/60 shadow-2xs"
+            onClick={handleSendFeeReminders}
+            disabled={sendingReminders}
+            className="w-full py-2.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-[14px] text-xs font-extrabold transition flex items-center justify-center gap-2 border border-indigo-200/60 shadow-2xs disabled:opacity-50"
           >
-            <Send className="w-3.5 h-3.5" /> Send All Reminders
+            {sendingReminders ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+            {sendingReminders ? "Sending..." : "Send All Reminders"}
           </button>
         </div>
       </div>

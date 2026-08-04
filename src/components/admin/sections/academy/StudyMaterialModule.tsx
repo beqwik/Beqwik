@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { FolderDown, Download, Plus, Pencil, Trash2, Search, BookOpen } from "lucide-react";
+import toast from "react-hot-toast";
 import type { StudyMaterialItem } from "../../../../services/organization/academyService";
 import CreateStudyMaterialModal from "./modals/CreateStudyMaterialModal";
 
@@ -126,7 +127,7 @@ export default function StudyMaterialModule({
               <div className="flex justify-between items-center text-xs text-slate-500 pt-3 border-t border-slate-200/60">
                 <span className="text-[10px] text-slate-400 font-medium">{mat.downloads} Downloads</span>
                 <button
-                  onClick={() => alert(`Downloading ${mat.title}...`)}
+                  onClick={() => toast.success(`Downloading ${mat.title}...`)}
                   className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-[10px] font-bold text-xs flex items-center gap-1 transition shadow-2xs"
                 >
                   <Download className="w-3.5 h-3.5" /> Download

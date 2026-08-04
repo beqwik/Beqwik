@@ -1,4 +1,5 @@
-import { Settings, Save } from "lucide-react";
+import { Settings, Save, Percent, IndianRupee } from "lucide-react";
+import toast from "react-hot-toast";
 
 export default function SettingsModule() {
   return (
@@ -10,7 +11,7 @@ export default function SettingsModule() {
           </h2>
           <p className="text-slate-500 text-xs font-medium">Configure passing marks scale and fee reminder schedules</p>
         </div>
-        <button onClick={() => alert("Settings saved!")} className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-[14px] text-xs font-bold transition flex items-center gap-2">
+        <button onClick={() => toast.success("Settings saved!")} className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-[14px] text-xs font-bold transition flex items-center gap-2">
           <Save className="w-4 h-4" /> Save Preferences
         </button>
       </div>

@@ -55,6 +55,14 @@ export async function getNotifications(memberId: string) {
     const target = targetAudience.toLowerCase().trim();
     if (target === "all" || target === "everyone") return true;
 
+    // Check for specific member targeting (email or ID)
+    if (
+      (currentMember?.email && target === currentMember.email.toLowerCase().trim()) ||
+      (currentMember?.id && target === currentMember.id.toLowerCase().trim())
+    ) {
+      return true;
+    }
+
     if (isStaff) {
       return target === "teachers" || target === "staff" || target === "teacher" || target === "faculty";
     } else {

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
 import { supabase } from "../../services/supabase";
 import { registerMember } from "../../services/member/memberAuth";
 import { dashboardService } from "../../services/dashboard/dashboardService";
@@ -63,6 +64,7 @@ import {
   getAnnouncementsList,
   createAnnouncement,
   deleteAnnouncement,
+  getAcademicAttendance,
   type AcademyClass,
   type Student,
   type StaffMember,
@@ -145,6 +147,7 @@ export default function AdminDashboard() {
   const [assignments, setAssignments] = useState<AssignmentItem[]>([]);
   const [materials, setMaterials] = useState<StudyMaterialItem[]>([]);
   const [announcements, setAnnouncements] = useState<AnnouncementItem[]>([]);
+  const [attendanceData, setAttendanceData] = useState<any[]>([]);
 
   // Add Course Form State
   const [showAddCourseModal, setShowAddCourseModal] = useState(false);
@@ -155,6 +158,8 @@ export default function AdminDashboard() {
   const [courseEndDate, setCourseEndDate] = useState("2027-02-01");
   const [courseTiming, setCourseTiming] = useState("09:00 - 10:30 AM");
   const [courseMaxCap, setCourseMaxCap] = useState("30");
+  const [coursePrice, setCoursePrice] = useState("0");
+  const [totalRevenue, setTotalRevenue] = useState(0);
 
   useEffect(() => {
     if (!organization) return;
@@ -180,7 +185,8 @@ export default function AdminDashboard() {
           tt,
           asgs,
           mats,
-          ancs
+          ancs,
+          attData
         ] = await Promise.all([
           getStudents(organization.id),
           getStaffMembers(organization.id),
@@ -192,7 +198,8 @@ export default function AdminDashboard() {
           getTimetableSlots(organization.id),
           getAssignmentsList(organization.id),
           getStudyMaterials(organization.id),
-          getAnnouncementsList(organization.id)
+          getAnnouncementsList(organization.id),
+          getAcademicAttendance(organization.id)
         ]);
 
         setStudents(stus);
@@ -206,6 +213,15 @@ export default function AdminDashboard() {
         setAssignments(asgs);
         setMaterials(mats);
         setAnnouncements(ancs);
+        setAttendanceData(attData);
+
+        // Calculate Revenue
+        let rev = 0;
+        clss.forEach((c: AcademyClass) => {
+          const enrolledCount = regs[c.id]?.length || 0;
+          rev += (c.price || 0) * enrolledCount;
+        });
+        setTotalRevenue(rev);
       } catch (err) {
         console.error("EduLMS load error:", err);
       }
@@ -247,6 +263,7 @@ export default function AdminDashboard() {
         courseDuration: courseDuration || "6 Months",
         startDate: courseStartDate,
         endDate: courseEndDate,
+        price: Number(coursePrice) || 0
       };
 
       const created = await createAcademyClass(organization.id, newClassData);
@@ -257,7 +274,7 @@ export default function AdminDashboard() {
       setShowAddCourseModal(false);
     } catch (err: any) {
       console.error("Error creating course:", err);
-      alert("Failed to create course. Please try again.");
+      toast.error("Failed to create course. Please try again.");
     }
   };
 
@@ -278,7 +295,7 @@ export default function AdminDashboard() {
       });
 
       if (res.success) {
-        alert(`Member successfully registered as ${newMemberRole === "staff" ? "Staff / Teacher" : "Student"}!`);
+        toast.success(`Member successfully registered as ${newMemberRole === "staff" ? "Staff / Teacher" : "Student"}!`);
         setShowAddMember(false);
         setNewMemberName("");
         setNewMemberEmail("");
@@ -287,11 +304,11 @@ export default function AdminDashboard() {
         setNewMemberRole("student");
         reloadDashboard();
       } else {
-        alert("Registration failed: " + res.error);
+        toast.error("Registration failed: " + res.error);
       }
     } catch (err) {
       console.error(err);
-      alert("An unexpected error occurred");
+      toast.error("An unexpected error occurred");
     } finally {
       setAddingMember(false);
     }
@@ -325,7 +342,7 @@ export default function AdminDashboard() {
       reloadDashboard();
     } catch (err) {
       console.error(err);
-      alert("Failed to toggle member status");
+      toast.error("Failed to toggle member status");
     }
   };
 
@@ -358,7 +375,7 @@ export default function AdminDashboard() {
 
       if (error) throw error;
 
-      alert(isOnlinePending ? "Subscription payment request created successfully!" : "Subscription granted successfully!");
+      toast.success(isOnlinePending ? "Subscription payment request created successfully!" : "Subscription granted successfully!");
       setShowAddSub(false);
       setSubMemberId("");
       setSubPlanName("");
@@ -368,7 +385,7 @@ export default function AdminDashboard() {
       reloadDashboard();
     } catch (err) {
       console.error(err);
-      alert("Failed to grant subscription");
+      toast.error("Failed to grant subscription");
     } finally {
       setAddingSub(false);
     }
@@ -377,7 +394,7 @@ export default function AdminDashboard() {
   const handleSendAlert = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!organization || members.length === 0) {
-      alert("No members in organization to alert.");
+      toast.error("No members in organization to alert.");
       return;
     }
 
@@ -391,13 +408,13 @@ export default function AdminDashboard() {
         alertMessage
       );
 
-      alert(`Alert broadcasted to ${members.length} member${members.length !== 1 ? "s" : ""}!`);
+      toast.success(`Alert broadcasted to ${members.length} member${members.length !== 1 ? "s" : ""}!`);
       setAlertTitle("");
       setAlertMessage("");
       reloadDashboard();
     } catch (err: any) {
       console.error("Broadcast alert error:", err);
-      alert(`Failed to send broadcast alert: ${err?.message || "Unknown error"}`);
+      toast.error(`Failed to send broadcast alert: ${err?.message || "Unknown error"}`);
     } finally {
       setSendingAlert(false);
     }
@@ -428,7 +445,7 @@ export default function AdminDashboard() {
       reloadDashboard();
     } catch (err) {
       console.error(err);
-      alert("Failed to save settings");
+      toast.error("Failed to save settings");
     } finally {
       setSavingSettings(false);
     }
@@ -466,14 +483,17 @@ export default function AdminDashboard() {
         <>
           {activeTab === "overview" && (
             <OverviewModule
-              studentsCount={students.length}
+              students={students}
+              feeReminders={feeReminders}
               teachersCount={teachers.length}
               coursesCount={classes.length}
-              onNavigateTab={navigateTab}
-              onOpenTestEngine={() => navigateTab("tests")}
-              onOpenFeeAutomation={() => navigateTab("fees")}
+              totalRevenue={totalRevenue}
+              organizationId={organization?.id || ""}
+              onNavigateTab={(tab) => navigate(`?tab=${tab}`)}
+              onOpenTestEngine={() => navigate("?tab=tests")}
+              onOpenFeeAutomation={() => navigate("?tab=fees")}
               onOpenAddStudent={() => setShowAddMember(true)}
-              onOpenCreateAnnouncement={() => navigateTab("announcements")}
+              onOpenCreateAnnouncement={() => navigate("?tab=announcements")}
             />
           )}
 
@@ -541,7 +561,12 @@ export default function AdminDashboard() {
           )}
 
           {activeTab === "attendance" && (
-            <AttendanceModule students={students} />
+            <AttendanceModule
+              attendanceData={attendanceData}
+              organizationId={organization?.id || ""}
+              students={students}
+              feeReminders={feeReminders}
+            />
           )}
 
           {activeTab === "tests" && (
@@ -557,6 +582,7 @@ export default function AdminDashboard() {
           {activeTab === "results" && (
             <ResultsModule
               results={results}
+              organizationId={organization?.id || ""}
               onCreateTestResult={async (resData) => {
                 if (!organization?.id) return;
                 const created = await createTestResult(organization.id, resData);
@@ -571,15 +597,36 @@ export default function AdminDashboard() {
                 await deleteTestResult(resId, organization?.id);
                 setResults(prev => prev.filter(r => r.id !== resId));
               }}
+              onBulkUploadSuccess={(newResults) => {
+                const mappedResults = newResults.map(row => ({
+                  id: row.id,
+                  student_name: row.student_name,
+                  exam_title: row.exam_title,
+                  score: Number(row.score),
+                  total_marks: Number(row.total_marks),
+                  percentage: Math.round((Number(row.score) / Number(row.total_marks)) * 100) || 0,
+                  grade: row.grade,
+                  status: row.status,
+                  date: row.created_at || new Date().toISOString()
+                }));
+                setResults(prev => [...mappedResults, ...prev]);
+              }}
             />
           )}
 
           {activeTab === "fees" && (
             <FeesModule
               reminders={feeReminders}
+              organizationId={organization?.id || ""}
+              students={students}
               onTriggerBatchReminders={async () => {
-                const res = await triggerBatchFeeReminders(organization?.id || "");
-                alert(res.message);
+                const dueStudents = feeReminders.filter(f => f.due_fee > 0);
+                if (dueStudents.length === 0) {
+                  toast.error("No due students found to send reminders.");
+                  return;
+                }
+                const res = await triggerBatchFeeReminders(organization?.id || "", dueStudents);
+                toast.success(res.message);
               }}
             />
           )}
@@ -876,6 +923,17 @@ export default function AdminDashboard() {
                     className="w-full px-3 py-2 border border-slate-200 rounded-xl"
                   />
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-slate-600 mb-1 font-bold">Course Price (₹)</label>
+                <input
+                  type="number"
+                  placeholder="e.g. 15000"
+                  value={coursePrice}
+                  onChange={e => setCoursePrice(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-600 outline-none"
+                />
               </div>
 
               <div className="flex justify-end gap-3 pt-4 border-t border-slate-100">

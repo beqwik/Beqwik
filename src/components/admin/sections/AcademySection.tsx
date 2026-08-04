@@ -14,6 +14,7 @@ import {
   Search,
   FileSpreadsheet
 } from "lucide-react";
+import toast from "react-hot-toast";
 import BulkUploadStudentsModal from "./academy/modals/BulkUploadStudentsModal";
 import BulkUploadStaffModal from "./academy/modals/BulkUploadStaffModal";
 import {
@@ -145,7 +146,7 @@ export default function AcademySection({ organizationId, members: _members }: Ac
       setRoom("Room 101");
       setMaxCapacity("20");
     } catch (err: any) {
-      alert("Failed to create class in database: " + (err?.message || "Unknown error"));
+      toast.error("Failed to create class in database: " + (err?.message || "Unknown error"));
     } finally {
       setSubmitting(false);
     }
@@ -163,7 +164,7 @@ export default function AcademySection({ organizationId, members: _members }: Ac
         return copy;
       });
     } catch (err: any) {
-      alert("Failed to delete class: " + (err?.message || "Unknown error"));
+      toast.error("Failed to delete class: " + (err?.message || "Unknown error"));
     }
   };
 
@@ -173,13 +174,13 @@ export default function AcademySection({ organizationId, members: _members }: Ac
 
     const currentRegs = classRegistrations[registeringClassId] || [];
     if (currentRegs.includes(selectedStudentId)) {
-      alert("This student is already enrolled in this class.");
+      toast.error("This student is already enrolled in this class.");
       return;
     }
 
     const classObj = classes.find((c) => c.id === registeringClassId);
     if (classObj && currentRegs.length >= classObj.maxCapacity) {
-      alert("This class is already full.");
+      toast.error("This class is already full.");
       return;
     }
 
@@ -192,9 +193,9 @@ export default function AcademySection({ organizationId, members: _members }: Ac
       }));
       setRegisteringClassId(null);
       setSelectedStudentId("");
-      alert("Student successfully enrolled in class!");
+      toast.success("Student successfully enrolled in class!");
     } catch (err: any) {
-      alert("Failed to enroll student: " + (err?.message || "Unknown error"));
+      toast.error("Failed to enroll student: " + (err?.message || "Unknown error"));
     } finally {
       setSubmitting(false);
     }
@@ -210,7 +211,7 @@ export default function AcademySection({ organizationId, members: _members }: Ac
         [classId]: (prev[classId] || []).filter((id) => id !== studentId)
       }));
     } catch (err: any) {
-      alert("Failed to unenroll student: " + (err?.message || "Unknown error"));
+      toast.error("Failed to unenroll student: " + (err?.message || "Unknown error"));
     }
   };
 
@@ -242,7 +243,7 @@ export default function AcademySection({ organizationId, members: _members }: Ac
       setStudentRoomNumber("");
       setStudentHostelBlock("");
     } catch (err: any) {
-      alert("Failed to create student: " + (err?.message || "Unknown error"));
+      toast.error("Failed to create student: " + (err?.message || "Unknown error"));
     } finally {
       setSubmitting(false);
     }
@@ -255,7 +256,7 @@ export default function AcademySection({ organizationId, members: _members }: Ac
       await deleteStudent(studentId);
       setStudents((prev) => prev.filter((s) => s.id !== studentId));
     } catch (err: any) {
-      alert("Failed to delete student: " + (err?.message || "Unknown error"));
+      toast.error("Failed to delete student: " + (err?.message || "Unknown error"));
     }
   };
 

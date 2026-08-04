@@ -709,6 +709,7 @@ export default function MemberDashboard() {
           <h3 className="font-extrabold text-slate-900 text-lg mb-4">Student Modules</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {[
+              { to: "/student/attendance", icon: "📅", label: "My Attendance", sub: "View monthly attendance records" },
               { to: "/member/courses", icon: "🔍", label: "Explore Courses", sub: "Browse active academy courses" },
               { to: "/member/my-courses", icon: "🎓", label: "My Courses", sub: `${enrolledList.length} enrolled classes` },
               { to: "/member/notifications", icon: "🔔", label: "Notice Board", sub: `${unreadCount} unread notices` },

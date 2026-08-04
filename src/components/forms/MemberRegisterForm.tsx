@@ -68,7 +68,8 @@ export default function MemberRegisterForm() {
       return;
     }
 
-    const isAcademy = verifiedOrg?.organization_type === "Academy";
+    const orgTypeStr = (verifiedOrg?.organization_type || verifiedOrg?.category || verifiedOrg?.type || "").toLowerCase();
+    const isAcademy = orgTypeStr.includes("academy") || orgTypeStr.includes("school") || orgTypeStr.includes("college") || orgTypeStr.includes("hostel");
 
     try {
       setSubmitting(true);
@@ -141,7 +142,8 @@ export default function MemberRegisterForm() {
     setSubmitError("");
   };
 
-  const isAcademy = verifiedOrg?.organization_type === "Academy";
+  const renderOrgTypeStr = (verifiedOrg?.organization_type || verifiedOrg?.category || verifiedOrg?.type || "").toLowerCase();
+  const isAcademy = renderOrgTypeStr.includes("academy") || renderOrgTypeStr.includes("school") || renderOrgTypeStr.includes("college") || renderOrgTypeStr.includes("hostel");
 
   return (
     <div className="space-y-5">

@@ -19,8 +19,8 @@ export default function ExploreCourses() {
   const [searchQuery, setSearchQuery] = useState("");
   const [processingId, setProcessingId] = useState<string | null>(null);
 
-  const studentId = member?.student_code || member?.id || member?.email || "STU-1001";
-  const orgId = org?.id || member?.organization_id || "HOC002";
+  const studentId = member?.student_code || member?.id || member?.email || "";
+  const orgId = org?.id || member?.organization_id || "";
 
   useEffect(() => {
     async function loadData() {

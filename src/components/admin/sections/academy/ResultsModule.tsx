@@ -1,22 +1,28 @@
 import { useState } from "react";
-import { BarChart2, Plus, Pencil, Trash2, Search, Award } from "lucide-react";
+import { BarChart2, Plus, Pencil, Trash2, Search, Award, FileSpreadsheet } from "lucide-react";
 import type { TestResultItem } from "../../../../services/organization/academyService";
 import UploadResultModal from "./modals/UploadResultModal";
+import BulkUploadResultsModal from "./modals/BulkUploadResultsModal";
 
 interface ResultsModuleProps {
   results: TestResultItem[];
+  organizationId: string;
   onCreateTestResult?: (data: any) => Promise<void> | void;
   onUpdateTestResult?: (id: string, data: any) => Promise<void> | void;
   onDeleteTestResult?: (id: string) => Promise<void> | void;
+  onBulkUploadSuccess?: (newResults: any[]) => void;
 }
 
 export default function ResultsModule({
   results,
+  organizationId,
   onCreateTestResult,
   onUpdateTestResult,
-  onDeleteTestResult
+  onDeleteTestResult,
+  onBulkUploadSuccess
 }: ResultsModuleProps) {
   const [showModal, setShowModal] = useState(false);
+  const [showBulkUpload, setShowBulkUpload] = useState(false);
   const [editingItem, setEditingItem] = useState<TestResultItem | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -40,8 +46,8 @@ export default function ResultsModule({
 
   const filteredResults = results.filter(
     res =>
-      res.student_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      res.exam_title.toLowerCase().includes(searchQuery.toLowerCase())
+      (res.student_name || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (res.exam_title || "").toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (
@@ -69,10 +75,17 @@ export default function ResultsModule({
           </div>
 
           <button
+            onClick={() => setShowBulkUpload(true)}
+            className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-[14px] text-xs font-extrabold transition flex items-center gap-2 shrink-0 cursor-pointer"
+          >
+            <FileSpreadsheet className="w-4 h-4" /> Upload CSV/Excel
+          </button>
+
+          <button
             onClick={handleOpenCreate}
             className="px-4 py-2 bg-gradient-to-r from-indigo-600 via-indigo-700 to-purple-700 hover:opacity-95 text-white rounded-[14px] text-xs font-extrabold transition flex items-center gap-2 shadow-md shadow-indigo-500/20 shrink-0 cursor-pointer"
           >
-            <Plus className="w-4 h-4" /> Upload Result
+            <Plus className="w-4 h-4" /> Add Single
           </button>
         </div>
       </div>
@@ -83,6 +96,7 @@ export default function ResultsModule({
           <table className="w-full text-left text-xs text-slate-700">
             <thead className="bg-slate-50 border-b border-slate-100 text-slate-400 font-bold uppercase">
               <tr>
+                <th className="px-4 py-3 w-16 text-center">Sr. No.</th>
                 <th className="px-4 py-3">Student Name</th>
                 <th className="px-4 py-3">Exam Title</th>
                 <th className="px-4 py-3">Score</th>
@@ -92,8 +106,9 @@ export default function ResultsModule({
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 font-medium">
-              {filteredResults.map((res) => (
+              {filteredResults.map((res, index) => (
                 <tr key={res.id} className="hover:bg-slate-50/70 transition group">
+                  <td className="px-4 py-3.5 text-center text-slate-400 font-bold">{index + 1}</td>
                   <td className="px-4 py-3.5 font-extrabold text-slate-900">{res.student_name}</td>
                   <td className="px-4 py-3.5 text-slate-600 font-semibold">{res.exam_title}</td>
                   <td className="px-4 py-3.5 font-black text-slate-900">
@@ -160,6 +175,17 @@ export default function ResultsModule({
         onClose={() => setShowModal(false)}
         onSubmit={handleModalSubmit}
         initialData={editingItem}
+      />
+
+      <BulkUploadResultsModal
+        isOpen={showBulkUpload}
+        onClose={() => setShowBulkUpload(false)}
+        organizationId={organizationId}
+        onSuccess={(newResults) => {
+          if (onBulkUploadSuccess) {
+            onBulkUploadSuccess(newResults);
+          }
+        }}
       />
     </div>
   );

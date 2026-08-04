@@ -72,7 +72,7 @@ export default function Sidebar() {
   const [copied, setCopied] = useState(false);
 
   const orgName = organization?.organization_name || "EduLMS Platform";
-  const orgCode = organization?.organization_code || "HOC002";
+  const orgCode = organization?.organization_code || "";
   const dynamicNavItems = getNavItemsForType(
     organization?.organization_type || "Academy"
   );
