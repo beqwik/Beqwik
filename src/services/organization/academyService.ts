@@ -30,13 +30,11 @@ export async function checkIsAcademyOrg(orgIdOrCode?: string, email?: string): P
     if (orgIdOrCode) {
       const isUuid = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(orgIdOrCode);
       let query = supabase.from("organizations").select("organization_type, category, type");
-      
       if (isUuid) {
         query = query.or(`id.eq.${orgIdOrCode},organization_code.ilike.${orgIdOrCode}`);
       } else {
         query = query.ilike("organization_code", orgIdOrCode);
       }
-
       const { data: orgData } = await query.maybeSingle();
 
       if (orgData) {

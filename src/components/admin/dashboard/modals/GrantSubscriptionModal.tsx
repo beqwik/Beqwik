@@ -59,7 +59,7 @@ export default function GrantSubscriptionModal({
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 flex items-center justify-center p-4">
-      <div className="bg-white rounded-3xl w-full max-w-md p-8 relative shadow-2xl animate-scaleUp">
+      <div className="bg-white rounded-3xl w-full max-w-md p-5 sm:p-8 relative shadow-2xl animate-scaleUp max-h-[90vh] overflow-y-auto">
         <button
           onClick={onClose}
           className="absolute right-6 top-6 text-slate-400 hover:text-slate-600 text-xl font-bold"
@@ -128,7 +128,7 @@ export default function GrantSubscriptionModal({
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
                 Amount (₹)
@@ -185,7 +185,7 @@ export default function GrantSubscriptionModal({
             <button
               type="submit"
               disabled={addingSub}
-              className="flex-1 py-3 bg-gradient-to-r from-[#e05275] to-[#b55fe6] hover:opacity-90 text-white rounded-xl text-sm font-semibold transition disabled:opacity-50 shadow-md shadow-[#e05275]/20"
+              className="flex-1 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold transition disabled:opacity-50 shadow-md shadow-blue-500/20"
             >
               {addingSub ? "Granting Plan..." : "Grant Sub"}
             </button>

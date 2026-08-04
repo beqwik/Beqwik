@@ -1,18 +1,9 @@
 import React, { useState, useEffect } from "react";
 import {
-  BookOpen,
-  Plus,
-  Clock,
-  Trash2,
-  MapPin,
-  Loader2,
-  GraduationCap,
-  Briefcase,
-  UserPlus,
-  Mail,
-  Phone,
-  Search,
-  FileSpreadsheet
+  BookOpen, Plus, Clock, Trash2, MapPin, Loader2, GraduationCap, 
+  Briefcase, UserPlus, Mail, Phone, Search, FileSpreadsheet, 
+  Trophy, Target, AlertTriangle, CheckCircle2, XCircle, Wrench, X, 
+  Users, Megaphone
 } from "lucide-react";
 import toast from "react-hot-toast";
 import BulkUploadStudentsModal from "./academy/modals/BulkUploadStudentsModal";
@@ -422,7 +413,7 @@ export default function AcademySection({ organizationId, members: _members }: Ac
                                   className="text-slate-400 hover:text-red-500 font-bold"
                                   title="Unenroll"
                                 >
-                                  ✕
+                                  <X className="w-4 h-4 inline-block" />
                                 </button>
                               </div>
                             );
@@ -664,7 +655,7 @@ export default function AcademySection({ organizationId, members: _members }: Ac
               onClick={() => setShowAddClass(false)}
               className="absolute right-6 top-6 text-slate-400 hover:text-slate-600 text-xl font-bold"
             >
-              ✕
+              <X className="w-4 h-4 inline-block" />
             </button>
             <h3 className="text-2xl font-bold text-slate-900 mb-2">Create New Class</h3>
             <p className="text-slate-500 text-sm mb-6">Schedule regular classes, workshops, or training sessions.</p>
@@ -794,7 +785,7 @@ export default function AcademySection({ organizationId, members: _members }: Ac
               onClick={() => setRegisteringClassId(null)}
               className="absolute right-6 top-6 text-slate-400 hover:text-slate-600 text-xl font-bold"
             >
-              ✕
+              <X className="w-4 h-4 inline-block" />
             </button>
             <h3 className="text-2xl font-bold text-slate-900 mb-2">Enroll Student</h3>
             <p className="text-slate-500 text-sm mb-6">Select a student to enroll in this class.</p>
@@ -849,7 +840,7 @@ export default function AcademySection({ organizationId, members: _members }: Ac
               onClick={() => setShowAddStudent(false)}
               className="absolute right-6 top-6 text-slate-400 hover:text-slate-600 text-xl font-bold"
             >
-              ✕
+              <X className="w-4 h-4 inline-block" />
             </button>
             <h3 className="text-2xl font-bold text-slate-900 mb-2">Add New Student</h3>
             <p className="text-slate-500 text-sm mb-6">Create a student record in your database.</p>
@@ -959,7 +950,7 @@ export default function AcademySection({ organizationId, members: _members }: Ac
               onClick={() => setShowAddStaff(false)}
               className="absolute right-6 top-6 text-slate-400 hover:text-slate-600 text-xl font-bold"
             >
-              ✕
+              <X className="w-4 h-4 inline-block" />
             </button>
             <h3 className="text-2xl font-bold text-slate-900 mb-2">Add Staff / Teacher</h3>
             <p className="text-slate-500 text-sm mb-6">Create a teacher or staff member record.</p>

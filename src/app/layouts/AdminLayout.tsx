@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Outlet, Navigate } from "react-router-dom";
 import Sidebar from "../../components/layout/Sidebar";
 import Header from "../../components/layout/Header";
@@ -7,6 +8,7 @@ import useOrganization from "../../hooks/useOrganization";
 export default function AdminLayout() {
   const { organization, loading: orgLoading } = useOrganization();
   const { subscription, loading: subLoading } = useSubscription();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   if (orgLoading || subLoading) {
     return (
@@ -26,14 +28,14 @@ export default function AdminLayout() {
 
   return (
     <div className="flex min-h-screen bg-[#f8fafc] text-slate-800 font-sans antialiased">
-      {/* FIXED 260px SIDEBAR */}
-      <Sidebar />
+      {/* SIDEBAR — drawer on mobile, fixed on lg+ */}
+      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       {/* FLUID MAIN CONTENT AREA */}
-      <div className="flex-1 ml-[260px] flex flex-col min-h-screen w-[calc(100%-260px)]">
-        <Header />
+      <div className="flex-1 lg:ml-[260px] flex flex-col min-h-screen w-full lg:w-[calc(100%-260px)]">
+        <Header onToggleSidebar={() => setSidebarOpen((prev) => !prev)} />
 
-        <main className="flex-1 p-8 bg-[#f8fafc]">
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 bg-[#f8fafc]">
           <Outlet />
         </main>
       </div>

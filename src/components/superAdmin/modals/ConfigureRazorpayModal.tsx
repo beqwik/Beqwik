@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { CreditCard, Eye, EyeOff, Key, Lock, Trash2, CheckCircle2, AlertCircle } from "lucide-react";
 import { getRazorpayConfig, saveRazorpayConfig, deleteRazorpayConfig } from "../../../services/superAdmin/razorpayConfigService";
+import { verifyRazorpay } from "../../../services/superAdmin/verifyRazorpayService";
 
 interface ConfigureRazorpayModalProps {
   open: boolean;
@@ -22,6 +23,8 @@ export default function ConfigureRazorpayModal({
   const [deleting, setDeleting] = useState(false);
   
   const [status, setStatus] = useState<{ type: "success" | "error"; message: string } | null>(null);
+  const [verified, setVerified] = useState(false);
+  const [verifying, setVerifying] = useState(false);
 
   useEffect(() => {
     if (open && organization?.id) {
@@ -51,6 +54,54 @@ export default function ConfigureRazorpayModal({
       setFetching(false);
     }
   }
+
+  async function handleVerify() {
+  if (!keyId || !keySecret) {
+    setStatus({
+      type: "error",
+      message: "Enter both Key ID and Secret.",
+    });
+    return;
+  }
+
+  setVerifying(true);
+
+  try {
+    const result = await verifyRazorpay(
+      keyId.trim(),
+      keySecret.trim()
+    );
+
+    if (result.success) {
+      setVerified(true);
+
+      setStatus({
+        type: "success",
+        message: "Razorpay account verified successfully.",
+      });
+    } else {
+      setVerified(false);
+
+      setStatus({
+        type: "error",
+        message:
+          result.error ??
+          "Verification failed.",
+      });
+    }
+  } catch (e: any) {
+    setVerified(false);
+
+    setStatus({
+      type: "error",
+      message:
+        e.message ??
+        "Verification failed.",
+    });
+  } finally {
+    setVerifying(false);
+  }
+}
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
@@ -172,7 +223,10 @@ export default function ConfigureRazorpayModal({
                 required
                 placeholder="rzp_test_... or rzp_live_..."
                 value={keyId}
-                onChange={(e) => setKeyId(e.target.value)}
+                onChange={(e) => {
+                 setKeyId(e.target.value);
+                 setVerified(false);
+                  }}
                 className="w-full px-4 py-3 rounded-2xl border border-slate-200 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition"
               />
             </div>
@@ -189,7 +243,10 @@ export default function ConfigureRazorpayModal({
                   required
                   placeholder="Enter secret key"
                   value={keySecret}
-                  onChange={(e) => setKeySecret(e.target.value)}
+                  onChange={(e) => {
+                  setKeySecret(e.target.value);
+                  setVerified(false);
+                    }}
                   className="w-full px-4 py-3 pr-12 rounded-2xl border border-slate-200 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-blue-600/20 focus:border-blue-600 transition"
                 />
                 <button
@@ -206,6 +263,24 @@ export default function ConfigureRazorpayModal({
             <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4 text-xs text-slate-500 font-medium leading-relaxed">
               💡 <strong>Note:</strong> Key ID will be exposed during checkout to build the Razorpay UI, but the Secret remains encrypted server-side to guarantee secure verification.
             </div>
+
+            <div className="flex justify-end">
+
+<button
+type="button"
+onClick={handleVerify}
+className="px-5 py-3 rounded-2xl border border-blue-200 text-blue-600 hover:bg-blue-50 font-bold"
+>
+
+{verifying
+ ? "Verifying..."
+ : verified
+ ? "Verified ✓"
+ : "Verify Connection"}
+
+</button>
+
+</div>
 
             {/* Footer Buttons */}
             <div className="flex items-center justify-between gap-4 mt-8 pt-4 border-t border-slate-100">
@@ -233,7 +308,7 @@ export default function ConfigureRazorpayModal({
                 </button>
                 <button
                   type="submit"
-                  disabled={saving || deleting}
+                  disabled={saving || deleting || !verified}
                   className="px-6 py-3 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold transition shadow-lg shadow-blue-600/20 disabled:opacity-50"
                 >
                   {saving ? "Saving..." : "Save Config"}

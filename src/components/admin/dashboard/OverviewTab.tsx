@@ -1,19 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import {
-  Users,
-  CreditCard,
-  IndianRupee,
-  Calendar,
-  UserPlus,
-  Dumbbell,
-  UserCheck,
-  Bell,
-  Plus,
-  ArrowUpRight,
-  ChevronRight,
-  Activity
-} from "lucide-react";
+import { Users, CreditCard, IndianRupee, Calendar, UserPlus, Dumbbell, UserCheck, Bell, Plus, ArrowUpRight, ChevronRight, Activity, User, Home, GraduationCap, Briefcase, Search, Hand, Megaphone, Building2, CheckCircle2 } from "lucide-react";
 import { getGymSlots, getGymBookings } from "../../../services/organization/gymService";
 
 interface OverviewTabProps {
@@ -127,20 +114,20 @@ export default function OverviewTab({
   const isHostelMess = orgType === "Hostel" || orgType === "Mess";
 
   const studentLabel = isGym ? "Members" : isHostelMess ? "Residents" : "Students";
-  const studentIcon = isGym ? "🏋️‍♂️" : isHostelMess ? "🏠" : "🎓";
+  const studentIcon = isGym ? <Dumbbell className="w-4 h-4" /> : isHostelMess ? <Home className="w-4 h-4" /> : <GraduationCap className="w-4 h-4" />;
   const staffLabel = isGym ? "Trainers" : isHostelMess ? "Staff" : "Staff";
-  const staffIcon = isGym ? "👨‍🏫" : "💼";
+  const staffIcon = isGym ? <UserCheck className="w-4 h-4" /> : <Briefcase className="w-4 h-4" />;
 
   const memberCount = members.filter(m => m.role === 'student' || !m.role).length;
   const staffCount = members.filter(m => m.role === 'staff').length;
 
   return (
-    <div className="space-y-8 animate-fadeIn">
+    <div className="space-y-5 lg:space-y-8 animate-fadeIn">
       {/* ── WELCOME & TOP BAR ── */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
-            Good morning, Admin <span className="inline-block">👋</span>
+          <h1 className="text-xl sm:text-2xl lg:text-3xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
+            Good morning, Admin <span className="inline-block"><Hand className="w-6 h-6 inline-block text-amber-500 ml-2" /></span>
           </h1>
           <p className="text-slate-500 text-sm mt-1">
             Here's what's happening at{" "}
@@ -159,7 +146,7 @@ export default function OverviewTab({
 
           <button
             onClick={() => onAddMember()}
-            className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs transition shadow-md shadow-blue-500/20 flex items-center gap-1.5"
+            className="w-full sm:w-auto px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl text-xs transition shadow-md shadow-blue-500/20 flex items-center justify-center gap-1.5"
           >
             <Plus className="w-4 h-4" /> Quick Action
           </button>
@@ -167,9 +154,9 @@ export default function OverviewTab({
       </div>
 
       {/* ── TOP 4 REAL METRIC CARDS ── */}
-      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5">
         {/* TOTAL MEMBERS */}
-        <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm hover:shadow-md transition">
+        <div className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200 p-4 sm:p-6 shadow-sm hover:shadow-md transition">
           <div className="flex items-center justify-between">
             <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center">
               <Users className="w-6 h-6" />
@@ -179,7 +166,7 @@ export default function OverviewTab({
             </span>
           </div>
           <p className="text-slate-500 text-sm font-semibold">Total Members</p>
-          <h2 className="text-3xl font-black text-slate-800 mt-1">
+          <h2 className="text-2xl lg:text-3xl font-black text-slate-800 mt-1">
             {members.length}
           </h2>
           <div className="mt-3 flex gap-4 text-xs font-semibold">
@@ -199,7 +186,7 @@ export default function OverviewTab({
         </div>
 
         {/* ACTIVE SUBSCRIPTIONS */}
-        <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm hover:shadow-md transition">
+        <div className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200 p-4 sm:p-6 shadow-sm hover:shadow-md transition">
           <div className="flex items-center justify-between">
             <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
               <CreditCard className="w-6 h-6" />
@@ -211,7 +198,7 @@ export default function OverviewTab({
           <p className="text-slate-500 text-sm font-semibold">
             Active Subscriptions
           </p>
-          <h2 className="text-3xl font-black text-slate-800 mt-1">
+          <h2 className="text-2xl lg:text-3xl font-black text-slate-800 mt-1">
             {activeSubs.length}
           </h2>
           <p className="text-xs text-slate-400 mt-3 font-medium">
@@ -220,7 +207,7 @@ export default function OverviewTab({
         </div>
 
         {/* MONTHLY REVENUE */}
-        <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm hover:shadow-md transition">
+        <div className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200 p-4 sm:p-6 shadow-sm hover:shadow-md transition">
           <div className="flex items-center justify-between">
             <div className="w-12 h-12 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center">
               <IndianRupee className="w-6 h-6" />
@@ -230,14 +217,14 @@ export default function OverviewTab({
             </span>
           </div>
           <p className="text-slate-500 text-xs font-bold uppercase tracking-wider mt-4">Monthly Revenue</p>
-          <h2 className="text-3xl font-black text-slate-900 mt-1">{formatCurrency(mrr)}</h2>
+          <h2 className="text-2xl lg:text-3xl font-black text-slate-900 mt-1">{formatCurrency(mrr)}</h2>
           <p className="text-xs text-slate-400 font-medium mt-3">
             Avg: {formatCurrency(activeSubs.length ? mrr / activeSubs.length : 0)} /member
           </p>
         </div>
 
         {/* TRAINING SESSIONS / SLOTS */}
-        <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm hover:shadow-md transition">
+        <div className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200 p-4 sm:p-6 shadow-sm hover:shadow-md transition">
           <div className="flex items-center justify-between">
             <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center">
               <Dumbbell className="w-6 h-6" />
@@ -247,7 +234,7 @@ export default function OverviewTab({
             </span>
           </div>
           <p className="text-slate-500 text-xs font-bold uppercase tracking-wider mt-4">Training Sessions</p>
-          <h2 className="text-3xl font-black text-slate-900 mt-1">{totalSlotsCount}</h2>
+          <h2 className="text-2xl lg:text-3xl font-black text-slate-900 mt-1">{totalSlotsCount}</h2>
           <p className="text-xs text-slate-400 font-medium mt-3">
             Active session slots
           </p>
@@ -255,9 +242,9 @@ export default function OverviewTab({
       </div>
 
       {/* ── MIDDLE ROW: REAL CHARTS & QUICK ACTIONS ── */}
-      <div className="grid lg:grid-cols-3 gap-8">
+      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-8">
         {/* REAL MEMBER GROWTH CHART */}
-        <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm flex flex-col justify-between">
+        <div className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200 p-4 sm:p-6 shadow-sm flex flex-col justify-between">
           <div className="flex items-center justify-between mb-4">
             <div>
               <h3 className="font-extrabold text-slate-900 text-base">Member Growth</h3>
@@ -297,7 +284,7 @@ export default function OverviewTab({
         </div>
 
         {/* REAL MEMBERSHIP PLAN DISTRIBUTION */}
-        <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm flex flex-col justify-between">
+        <div className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200 p-4 sm:p-6 shadow-sm flex flex-col justify-between">
           <div className="flex items-center justify-between mb-4">
             <div>
               <h3 className="font-extrabold text-slate-900 text-base">Membership Distribution</h3>
@@ -369,7 +356,7 @@ export default function OverviewTab({
         </div>
 
         {/* QUICK ACTIONS GRID */}
-        <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm flex flex-col justify-between">
+        <div className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200 p-4 sm:p-6 shadow-sm flex flex-col justify-between md:col-span-2 lg:col-span-1">
           <div>
             <h3 className="font-extrabold text-slate-900 text-base mb-1">Quick Actions</h3>
             <p className="text-slate-400 text-xs mb-4">Fast shortcuts for gym management</p>
@@ -440,9 +427,9 @@ export default function OverviewTab({
       </div>
 
       {/* ── BOTTOM ROW: RECENT MEMBERS, RECENT ALERTS, TODAY'S OVERVIEW ── */}
-      <div className="grid lg:grid-cols-3 gap-8">
+      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-8">
         {/* RECENT MEMBERS */}
-        <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm space-y-4">
+        <div className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200 p-4 sm:p-6 shadow-sm space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="font-extrabold text-slate-900 text-base">Recent Members</h3>
             <button
@@ -476,13 +463,13 @@ export default function OverviewTab({
             </div>
           ) : (
             <div className="text-center py-8 text-slate-400 text-xs">
-              👥 No members registered yet.
+              <Users className="w-5 h-5 inline-block" /> No members registered yet.
             </div>
           )}
         </div>
 
         {/* RECENT ALERTS */}
-        <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm space-y-4">
+        <div className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200 p-4 sm:p-6 shadow-sm space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="font-extrabold text-slate-900 text-base">Recent Alerts</h3>
             <button
@@ -498,7 +485,7 @@ export default function OverviewTab({
               {recentNotifications.slice(0, 4).map((notif) => (
                 <div key={notif.id} className="py-3 first:pt-0 last:pb-0">
                   <div className="flex items-center justify-between">
-                    <h4 className="font-bold text-xs text-slate-800 truncate max-w-[180px]">
+                    <h4 className="font-bold text-xs text-slate-800 truncate max-w-[140px] sm:max-w-[180px]">
                       {notif.title}
                     </h4>
                     <span className="text-[10px] text-slate-400 font-semibold">
@@ -513,13 +500,13 @@ export default function OverviewTab({
             </div>
           ) : (
             <div className="text-center py-8 text-slate-400 text-xs">
-              📢 No announcements sent yet.
+              <Megaphone className="w-5 h-5 inline-block mr-2" /> No announcements sent yet.
             </div>
           )}
         </div>
 
         {/* TODAY'S OVERVIEW METRICS */}
-        <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm space-y-5">
+        <div className="bg-white rounded-2xl sm:rounded-3xl border border-slate-200 p-4 sm:p-6 shadow-sm space-y-5 md:col-span-2 lg:col-span-1">
           <h3 className="font-extrabold text-slate-900 text-base">Today's Overview</h3>
 
           <div className="space-y-4">

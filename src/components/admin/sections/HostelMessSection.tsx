@@ -1,15 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { 
-  Coffee, 
-  Utensils, 
-  Moon, 
-  Edit2, 
-  Calendar, 
-  ClipboardCheck, 
-  Users, 
-  Search,
-  TrendingUp
-} from "lucide-react";
+import { Coffee, Utensils, Moon, Edit2, Calendar, ClipboardCheck, Users, Search, TrendingUp, Trophy, Target, Mail, Phone, AlertTriangle, CheckCircle2, XCircle, Wrench, X, Megaphone } from "lucide-react";
 
 interface HostelMessSectionProps {
   activeTab: string;
@@ -238,7 +228,7 @@ export default function HostelMessSection({ activeTab, organizationId, members }
                   onClick={() => setEditingDay(null)}
                   className="absolute right-6 top-6 text-slate-400 hover:text-slate-600 text-xl font-bold"
                 >
-                  ✕
+                  <X className="w-4 h-4 inline-block" />
                 </button>
                 <h3 className="text-2xl font-bold text-slate-900 mb-2">Edit {editingDay} Menu</h3>
                 <p className="text-slate-500 text-sm mb-6">Input standard meal choices and descriptions.</p>
@@ -455,7 +445,7 @@ export default function HostelMessSection({ activeTab, organizationId, members }
                         </select>
 
                         <span className={`text-xs font-bold ${hasDined ? "text-green-600" : "text-slate-400"}`}>
-                          {hasDined ? "Dined ✅" : "Absent ❌"}
+                          {hasDined ? <>Dined <CheckCircle2 className="w-5 h-5 inline-block text-emerald-500" /></> : <>Absent <XCircle className="w-5 h-5 inline-block text-red-500" /></>}
                         </span>
                       </div>
                     </div>

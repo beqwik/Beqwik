@@ -79,7 +79,7 @@ export default function MemberNotifications() {
     <div className="space-y-6 max-w-3xl">
 
       {/* HEADER */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-3xl font-bold text-slate-900">Notifications</h1>
           <p className="text-slate-500 mt-1">

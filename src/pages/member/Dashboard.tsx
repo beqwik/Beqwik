@@ -168,7 +168,7 @@ export default function MemberDashboard() {
   // Fetch Academy Data (Classes, Assignments, Results, Materials)
   useEffect(() => {
     async function fetchAcademyData() {
-      if (!org?.id) return;
+      if (!org?.id || org?.organization_type !== "Academy") return;
       try {
         const [classes, regs, asgs, res, mats, notices] = await Promise.all([
           getAcademyClasses(org.id),
@@ -262,6 +262,27 @@ export default function MemberDashboard() {
     }
   };
 
+  const handleReserveSlot = async (slotId: string) => {
+    if (!org?.id || !member?.id) return;
+    const enrolledIds = bookings[slotId] || [];
+    const isBooked = enrolledIds.includes(member.id);
+
+    setBookingLoading(true);
+    try {
+      if (isBooked) {
+        await cancelGymBooking(slotId, member.id);
+      } else {
+        await bookGymSlot(slotId, member.id);
+      }
+      await fetchGymData();
+    } catch (e: any) {
+      console.error("Booking error:", e);
+      alert(e?.message || "Failed to update slot reservation.");
+    } finally {
+      setBookingLoading(false);
+    }
+  };
+
   const hour = new Date().getHours();
   const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
   const firstName = member?.full_name?.split(" ")[0] || (isStaff ? "Teacher" : "Student");
@@ -302,7 +323,7 @@ export default function MemberDashboard() {
           <div className="flex flex-wrap items-center gap-3">
             <button
               onClick={() => { setEditingItem(null); setActiveModal("assignment"); }}
-              className="px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:opacity-95 text-white rounded-[14px] text-xs font-extrabold transition flex items-center gap-2 shadow-md shadow-indigo-500/20 cursor-pointer"
+              className="px-4 py-2 bg-blue-600 hover:opacity-95 text-white rounded-[14px] text-xs font-extrabold transition flex items-center gap-2 shadow-md shadow-blue-500/20 cursor-pointer"
             >
               <Plus className="w-4 h-4" /> Create Homework
             </button>

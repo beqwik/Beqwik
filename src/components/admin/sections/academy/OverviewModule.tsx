@@ -1,17 +1,9 @@
 import { useState } from "react";
 import { 
-  Users, 
-  GraduationCap, 
-  BookOpen, 
-  IndianRupee, 
-  TrendingUp, 
-  Send, 
-  FileText, 
-  BellRing, 
-  UserPlus, 
-  Sparkles,
-  Calendar,
-  Loader2
+  Users, GraduationCap, BookOpen, IndianRupee, TrendingUp, 
+  Send, FileText, BellRing, UserPlus, Sparkles, Calendar, 
+  Loader2, Trophy, Target, Mail, Phone, AlertTriangle, 
+  CheckCircle2, XCircle, Wrench, X, Megaphone
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { triggerBatchFeeReminders } from "../../../../services/organization/academyService";
@@ -498,7 +490,7 @@ export default function OverviewModule({
       <div className="bg-gradient-to-r from-purple-900 via-indigo-900 to-indigo-950 text-white rounded-[20px] p-6 shadow-xl flex flex-col md:flex-row items-center justify-between gap-6 relative overflow-hidden">
         <div className="flex items-center gap-4">
           <div className="w-14 h-14 rounded-[16px] bg-gradient-to-tr from-amber-400 to-yellow-300 text-purple-950 flex items-center justify-center font-black text-2xl shadow-lg shrink-0">
-            🏆
+            <Trophy className="w-5 h-5 inline-block text-amber-500" />
           </div>
           <div>
             <h3 className="text-lg font-extrabold">Unlock the Full Power of EduLMS!</h3>
@@ -508,7 +500,7 @@ export default function OverviewModule({
           </div>
         </div>
 
-        <button className="px-6 py-3 bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 text-white text-xs font-extrabold rounded-[14px] shadow-lg transition flex items-center gap-2 shrink-0">
+        <button className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white text-xs font-extrabold rounded-[14px] shadow-lg transition flex items-center gap-2 shrink-0">
           <Sparkles className="w-4 h-4 text-amber-300" /> Upgrade Now
         </button>
       </div>

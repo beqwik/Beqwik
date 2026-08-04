@@ -1,19 +1,6 @@
 import { useState } from "react";
 import { supabase } from "../../../services/supabase";
-import {
-  Building2,
-  Mail,
-  Phone,
-  MapPin,
-  Clock,
-  Shield,
-  Copy,
-  Check,
-  Save,
-  Eye,
-  EyeOff,
-  AlertTriangle,
-} from "lucide-react";
+import { Building2, Mail, Phone, MapPin, Clock, Shield, Copy, Check, Save, Eye, EyeOff, AlertTriangle, Trophy, Target, CheckCircle2, XCircle, Wrench, X, Users, Megaphone } from "lucide-react";
 
 interface GymSettingsTabProps {
   organization: any;
@@ -147,9 +134,9 @@ export default function GymSettingsTab({
         {/* Left: Org Card + Nav */}
         <div className="lg:col-span-1 space-y-4">
           {/* Org Identity Card */}
-          <div className="bg-gradient-to-br from-[#e05275] to-[#b55fe6] rounded-2xl p-5 text-white shadow-lg shadow-[#e05275]/20">
+          <div className="bg-gradient-to-br from-[#e05275] to-[#b55fe6] rounded-2xl p-5 text-white shadow-lg shadow-blue-500/20">
             <div className="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur flex items-center justify-center text-3xl font-black mb-3">
-              🏋️
+              <Target className="w-4 h-4 inline-block" />️
             </div>
             <h3 className="font-black text-lg leading-tight">{organization?.organization_name}</h3>
             <p className="text-white/70 text-xs mt-0.5">Gym / Fitness Center</p>
@@ -169,7 +156,7 @@ export default function GymSettingsTab({
           </div>
 
           {/* Nav */}
-          <nav className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+          <nav className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-x-auto flex lg:flex-col divide-x lg:divide-x-0 lg:divide-y divide-slate-100">
             {tabs.map((t) => {
               const Icon = t.icon;
               const active = activeSection === t.key;
@@ -177,7 +164,7 @@ export default function GymSettingsTab({
                 <button
                   key={t.key}
                   onClick={() => setActiveSection(t.key)}
-                  className={`w-full flex items-center gap-3 px-4 py-3.5 text-sm font-semibold transition border-b border-slate-100 last:border-b-0 ${
+                  className={`flex-1 lg:w-full flex items-center justify-center lg:justify-start gap-2 sm:gap-3 px-3 sm:px-4 py-3.5 text-xs sm:text-sm font-semibold transition whitespace-nowrap ${
                     active
                       ? "bg-gradient-to-r from-[#fff0f5] to-[#f5f0ff] text-[#e05275]"
                       : "text-slate-600 hover:bg-slate-50"
@@ -201,7 +188,7 @@ export default function GymSettingsTab({
                 <h3 className="font-bold text-slate-900">General Information</h3>
                 <p className="text-slate-500 text-xs mt-0.5">Update your gym's public profile and contact details.</p>
               </div>
-              <form onSubmit={handleSaveSettings} className="p-6 space-y-5">
+              <form onSubmit={handleSaveSettings} className="p-4 sm:p-6 space-y-5">
                 <div className="grid sm:grid-cols-2 gap-5">
                   {/* Gym Name */}
                   <div className="sm:col-span-2">
@@ -314,7 +301,7 @@ export default function GymSettingsTab({
                   <button
                     type="submit"
                     disabled={savingSettings}
-                    className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#e05275] to-[#b55fe6] hover:opacity-90 text-white rounded-xl text-sm font-bold transition disabled:opacity-50 shadow-md shadow-[#e05275]/20"
+                    className="flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-bold transition disabled:opacity-50 shadow-md shadow-blue-500/20"
                   >
                     <Save className="w-4 h-4" />
                     {savingSettings ? "Saving..." : "Save Changes"}
@@ -336,12 +323,12 @@ export default function GymSettingsTab({
                 <h3 className="font-bold text-slate-900">Operating Hours</h3>
                 <p className="text-slate-500 text-xs mt-0.5">Set when your gym is open each day of the week.</p>
               </div>
-              <div className="p-6 space-y-3">
+              <div className="p-4 sm:p-6 space-y-3">
                 {DAYS.map((day) => {
                   const slot = hours[day];
                   return (
-                    <div key={day} className={`flex items-center gap-4 p-4 rounded-xl border transition ${slot.closed ? "bg-slate-50 border-slate-200 opacity-60" : "bg-white border-slate-200 hover:border-[#e05275]/40"}`}>
-                      <div className="w-28">
+                    <div key={day} className={`flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 p-4 rounded-xl border transition ${slot.closed ? "bg-slate-50 border-slate-200 opacity-60" : "bg-white border-slate-200 hover:border-[#e05275]/40"}`}>
+                      <div className="w-full sm:w-28 flex items-center justify-between">
                         <p className="text-sm font-bold text-slate-800">{day}</p>
                       </div>
 
@@ -382,7 +369,7 @@ export default function GymSettingsTab({
                   <button
                     onClick={handleSaveHours}
                     disabled={savingHours}
-                    className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#e05275] to-[#b55fe6] hover:opacity-90 text-white rounded-xl text-sm font-bold transition disabled:opacity-50 shadow-md shadow-[#e05275]/20"
+                    className="flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-bold transition disabled:opacity-50 shadow-md shadow-blue-500/20"
                   >
                     <Save className="w-4 h-4" />
                     {savingHours ? "Saving..." : "Save Hours"}
@@ -406,7 +393,7 @@ export default function GymSettingsTab({
                   <h3 className="font-bold text-slate-900">Change Password</h3>
                   <p className="text-slate-500 text-xs mt-0.5">Update your admin account password.</p>
                 </div>
-                <form onSubmit={handleChangePassword} className="p-6 space-y-4">
+                <form onSubmit={handleChangePassword} className="p-4 sm:p-6 space-y-4">
                   {passwordMsg && (
                     <div className={`flex items-start gap-3 p-4 rounded-xl text-sm font-medium border ${
                       passwordMsg.type === "success"
@@ -462,7 +449,7 @@ export default function GymSettingsTab({
                     <button
                       type="submit"
                       disabled={savingPassword}
-                      className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#e05275] to-[#b55fe6] hover:opacity-90 text-white rounded-xl text-sm font-bold transition disabled:opacity-50 shadow-md shadow-[#e05275]/20"
+                      className="flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-bold transition disabled:opacity-50 shadow-md shadow-blue-500/20"
                     >
                       <Shield className="w-4 h-4" />
                       {savingPassword ? "Updating..." : "Update Password"}

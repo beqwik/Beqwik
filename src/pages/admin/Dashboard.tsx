@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
+import { X } from "lucide-react";
 import { supabase } from "../../services/supabase";
 import { registerMember } from "../../services/member/memberAuth";
 import { dashboardService } from "../../services/dashboard/dashboardService";
@@ -843,7 +844,7 @@ export default function AdminDashboard() {
           <div className="bg-white rounded-3xl p-6 w-full max-w-md shadow-2xl space-y-4 animate-scaleUp">
             <div className="flex justify-between items-center pb-3 border-b border-slate-100">
               <h3 className="text-base font-extrabold text-slate-900">Create New Course</h3>
-              <button onClick={() => setShowAddCourseModal(false)} className="text-slate-400 font-bold">✕</button>
+              <button onClick={() => setShowAddCourseModal(false)} className="text-slate-400 font-bold"><X className="w-4 h-4 inline-block" /></button>
             </div>
 
             <form onSubmit={handleCreateCourseSubmit} className="space-y-4 text-xs font-medium">

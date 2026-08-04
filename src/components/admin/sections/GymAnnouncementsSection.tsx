@@ -69,9 +69,9 @@ function CreateGymAnnouncementModal({ isOpen, onClose, onSubmit }: CreateModalPr
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-      <div className="bg-white rounded-[24px] border border-slate-100 shadow-2xl w-full max-w-lg overflow-hidden flex flex-col">
+      <div className="bg-white rounded-[24px] border border-slate-100 shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]">
         {/* Header */}
-        <div className="p-6 bg-gradient-to-r from-[#e05275] via-[#c44f8e] to-[#b55fe6] text-white flex justify-between items-center">
+        <div className="p-6 bg-blue-600 hover:bg-blue-700 text-white flex justify-between items-center">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center">
               <Megaphone className="w-5 h-5 text-white" />
@@ -91,7 +91,7 @@ function CreateGymAnnouncementModal({ isOpen, onClose, onSubmit }: CreateModalPr
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-5">
+        <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-5 overflow-y-auto">
           {error && (
             <div className="p-3 bg-rose-50 border border-rose-200 rounded-[14px] text-rose-700 text-xs font-semibold flex items-center gap-2">
               <AlertTriangle className="w-4 h-4 text-rose-500 shrink-0" />
@@ -165,7 +165,7 @@ function CreateGymAnnouncementModal({ isOpen, onClose, onSubmit }: CreateModalPr
             <button
               type="submit"
               disabled={submitting}
-              className="px-6 py-2.5 bg-gradient-to-r from-[#e05275] to-[#b55fe6] hover:opacity-95 text-white text-xs font-black rounded-[14px] shadow-md shadow-[#e05275]/20 transition flex items-center gap-2 disabled:opacity-50"
+              className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 hover:opacity-95 text-white text-xs font-black rounded-[14px] shadow-md shadow-blue-500/20 transition flex items-center gap-2 disabled:opacity-50"
             >
               {submitting ? (
                 <>
@@ -248,7 +248,7 @@ export default function GymAnnouncementsSection({
   return (
     <div className="space-y-6 animate-fadeIn">
       {/* Header */}
-      <div className="bg-white rounded-[20px] border border-slate-200 shadow-sm p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div className="bg-white rounded-[20px] border border-slate-200 shadow-sm p-4 sm:p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h2 className="text-xl font-black text-slate-900 flex items-center gap-2">
             <Megaphone className="w-5 h-5 text-[#e05275]" />
@@ -260,14 +260,14 @@ export default function GymAnnouncementsSection({
         </div>
         <button
           onClick={() => setShowModal(true)}
-          className="px-4 py-2.5 bg-gradient-to-r from-[#e05275] to-[#b55fe6] hover:opacity-90 text-white rounded-[14px] text-xs font-extrabold transition flex items-center gap-2 shadow-md shadow-[#e05275]/20 shrink-0"
+          className="w-full sm:w-auto px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-[14px] text-xs font-extrabold transition flex items-center justify-center gap-2 shadow-md shadow-blue-500/20 shrink-0"
         >
           <Plus className="w-4 h-4" /> New Announcement
         </button>
       </div>
 
       {/* Stats Bar */}
-      <div className="grid sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
         {(["urgent", "high", "normal"] as const).map((p) => {
           const count = announcements.filter((a) => a.priority === p).length;
           return (

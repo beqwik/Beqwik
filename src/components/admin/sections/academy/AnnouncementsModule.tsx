@@ -28,7 +28,7 @@ export default function AnnouncementsModule({
         </div>
         <button
           onClick={() => setShowModal(true)}
-          className="px-4 py-2.5 bg-gradient-to-r from-indigo-600 via-indigo-700 to-purple-700 hover:opacity-95 text-white rounded-[14px] text-xs font-extrabold transition flex items-center gap-2 shadow-md shadow-indigo-500/20 shrink-0"
+          className="px-4 py-2.5 bg-blue-600 hover:opacity-95 text-white rounded-[14px] text-xs font-extrabold transition flex items-center gap-2 shadow-md shadow-blue-500/20 shrink-0"
         >
           <Plus className="w-4 h-4" /> Create Announcement
         </button>

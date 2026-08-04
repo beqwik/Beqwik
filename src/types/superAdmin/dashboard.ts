@@ -29,7 +29,7 @@ export interface OrganizationGrowth {
 export interface DashboardKPI {
   trialOrganizations: number;
   activeOrganizations: number;
-  expiredOrganizations: number;
+  expiringSoon: number;
   pendingPayments: number;
 }
 
