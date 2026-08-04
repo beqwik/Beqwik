@@ -834,7 +834,7 @@ export default function TrainerScheduleManager({ organizationId }: TrainerSchedu
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-white rounded-[24px] border border-slate-100 shadow-2xl w-full max-w-lg overflow-hidden flex flex-col"
+              className="bg-white rounded-[24px] border border-slate-100 shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]"
             >
               {/* Modal Header */}
               <div className="p-6 bg-blue-600 text-white flex justify-between items-center">
@@ -856,7 +856,7 @@ export default function TrainerScheduleManager({ organizationId }: TrainerSchedu
               </div>
 
               {/* Modal Form */}
-              <form onSubmit={handleCreateSession} className="p-6 space-y-4">
+              <form onSubmit={handleCreateSession} className="p-4 sm:p-6 space-y-4 overflow-y-auto">
                 {formConflictWarning && (
                   <div className="p-3.5 bg-amber-50 border border-amber-300 rounded-[14px] text-amber-800 text-xs font-semibold flex items-start gap-2 animate-fadeIn">
                     <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />

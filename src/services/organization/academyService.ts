@@ -28,11 +28,14 @@ export async function checkIsAcademyOrg(orgIdOrCode?: string, email?: string): P
 
     // 3. Query organizations table dynamically by id or code
     if (orgIdOrCode) {
-      const { data: orgData } = await supabase
-        .from("organizations")
-        .select("organization_type, category, type")
-        .or(`id.eq.${orgIdOrCode},organization_code.ilike.${orgIdOrCode}`)
-        .maybeSingle();
+      const isUuid = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(orgIdOrCode);
+      let query = supabase.from("organizations").select("organization_type, category, type");
+      if (isUuid) {
+        query = query.eq("id", orgIdOrCode);
+      } else {
+        query = query.ilike("organization_code", orgIdOrCode);
+      }
+      const { data: orgData } = await query.maybeSingle();
 
       if (orgData) {
         const typeStr = (orgData.organization_type || orgData.category || orgData.type || "").toLowerCase();
@@ -52,14 +55,18 @@ export async function verifyOrganizationCode(code: string) {
   if (!code || !code.trim()) {
     return { success: false, error: "Please enter an Organization Code." };
   }
-  const cleanCode = code.trim().toUpperCase();
+  const cleanCode = code.trim();
 
   // 1. Query Supabase organizations table across multiple potential code columns
   try {
-    const { data, error } = await supabase
-      .from("organizations")
-      .select("*")
-      .or(`organization_code.ilike.${cleanCode},id.eq.${cleanCode}`);
+    const isUuid = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(cleanCode);
+    let query = supabase.from("organizations").select("*");
+    if (isUuid) {
+      query = query.eq("id", cleanCode);
+    } else {
+      query = query.ilike("organization_code", cleanCode);
+    }
+    const { data, error } = await query;
 
     if (!error && data && data.length > 0) {
       return { success: true, organization: data[0] };

@@ -28,9 +28,9 @@ export default function NotificationTab({
   formatDate,
 }: NotificationTabProps) {
   return (
-    <div className="grid md:grid-cols-3 gap-8 animate-fadeIn">
+    <div className="grid md:grid-cols-3 gap-4 lg:gap-8 animate-fadeIn">
       {/* BROADCAST ALERT COMPONENT */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 md:col-span-1 h-fit">
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-6 md:col-span-1 h-fit">
         <h3 className="font-bold text-slate-800 text-lg mb-4">
           <Megaphone className="w-5 h-5 inline-block mr-2" /> Broadcast New Alert
         </h3>
@@ -74,7 +74,7 @@ export default function NotificationTab({
       </div>
 
       {/* HISTORICAL BROADCAST LOGS */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 md:col-span-2">
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-6 md:col-span-2">
         <h3 className="font-bold text-slate-800 text-lg mb-4">
           History of Alerts
         </h3>

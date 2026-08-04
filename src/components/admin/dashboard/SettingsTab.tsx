@@ -41,9 +41,9 @@ export default function SettingsTab({
   handleSaveSettings,
 }: SettingsTabProps) {
   return (
-    <div className="grid md:grid-cols-3 gap-8 animate-fadeIn">
+    <div className="grid md:grid-cols-3 gap-4 lg:gap-8 animate-fadeIn">
       {/* ORG CODE DISPLAY */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 md:col-span-1 h-fit text-center">
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-6 md:col-span-1 h-fit text-center">
         <span className="text-4xl"><Building2 className="w-5 h-5 inline-block" /></span>
         <h3 className="font-extrabold text-slate-900 text-lg mt-3">
           {organization?.organization_name}
@@ -77,7 +77,7 @@ export default function SettingsTab({
       </div>
 
       {/* EDIT FORM */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 md:col-span-2">
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-6 md:col-span-2">
         <h3 className="font-bold text-slate-800 text-lg mb-6">
           Organization Information
         </h3>

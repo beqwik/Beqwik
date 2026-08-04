@@ -103,7 +103,7 @@ export default function SubscriptionTab({
       {/* SECTION 1: MEMBERSHIP PLAN TIERS BUILDER */}
       {organizationId && (
         <div className="space-y-4">
-          <div className="flex justify-between items-center bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-sm">
             <div>
               <h3 className="font-extrabold text-slate-900 text-lg flex items-center gap-2">
                 <Tag className="w-5 h-5 text-[#e05275]" /> Predefined Membership Tier Plans
@@ -114,16 +114,16 @@ export default function SubscriptionTab({
             </div>
             <button
               onClick={() => setShowAddPlan(true)}
-              className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm"
+              className="w-full sm:w-auto px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-sm"
             >
               <Plus className="w-4 h-4" /> Create Plan Tier
             </button>
           </div>
 
           {/* PLANS CARDS GRID */}
-          <div className="grid sm:grid-cols-3 gap-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-5">
             {plans.map((p) => (
-              <div key={p.id} className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm hover:shadow-md transition flex flex-col justify-between">
+              <div key={p.id} className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 shadow-sm hover:shadow-md transition flex flex-col justify-between">
                 <div>
                   <div className="flex justify-between items-start">
                     <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-purple-50 text-purple-700">
@@ -173,13 +173,13 @@ export default function SubscriptionTab({
 
       {/* SECTION 2: MEMBER SUBSCRIPTION LOGS */}
       <div className="space-y-4">
-        <div className="flex justify-between items-center">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
           <h3 className="font-bold text-slate-800 text-lg">
             Member Active Subscriptions & Logs
           </h3>
           <button
             onClick={onGrantSubscription}
-            className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold transition shadow-md shadow-blue-500/20"
+            className="w-full sm:w-auto px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold transition shadow-md shadow-blue-500/20 text-center"
           >
             <Plus className="w-4 h-4 inline-block mr-1" /> Grant Subscription
           </button>
@@ -187,14 +187,14 @@ export default function SubscriptionTab({
 
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+            <table className="w-full text-left border-collapse min-w-[650px]">
               <thead>
                 <tr className="bg-slate-50/75 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase">
-                  <th className="px-6 py-4">Member</th>
-                  <th className="px-6 py-4">Plan Details</th>
-                  <th className="px-6 py-4">Duration</th>
-                  <th className="px-6 py-4">Amount</th>
-                  <th className="px-6 py-4 text-center">Status</th>
+                  <th className="px-4 sm:px-6 py-4">Member</th>
+                  <th className="px-4 sm:px-6 py-4">Plan Details</th>
+                  <th className="px-4 sm:px-6 py-4 hidden sm:table-cell">Duration</th>
+                  <th className="px-4 sm:px-6 py-4">Amount</th>
+                  <th className="px-4 sm:px-6 py-4 text-center">Status</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-sm">
@@ -254,7 +254,7 @@ export default function SubscriptionTab({
       {/* CREATE PLAN MODAL */}
       {showAddPlan && (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl w-full max-w-md p-8 relative shadow-2xl animate-scaleUp">
+          <div className="bg-white rounded-3xl w-full max-w-md p-5 sm:p-8 relative shadow-2xl animate-scaleUp max-h-[90vh] overflow-y-auto">
             <button
               onClick={() => setShowAddPlan(false)}
               className="absolute right-6 top-6 text-slate-400 hover:text-slate-600 text-xl font-bold"
@@ -277,7 +277,7 @@ export default function SubscriptionTab({
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 mb-1">Price (₹)</label>
                   <input

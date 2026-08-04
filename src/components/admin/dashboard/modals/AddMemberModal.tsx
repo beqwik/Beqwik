@@ -60,7 +60,7 @@ export default function AddMemberModal({
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 flex items-center justify-center p-4">
-      <div className="bg-white rounded-3xl w-full max-w-md p-8 relative shadow-2xl animate-scaleUp">
+      <div className="bg-white rounded-3xl w-full max-w-md p-5 sm:p-8 relative shadow-2xl animate-scaleUp max-h-[90vh] overflow-y-auto">
         <button
           onClick={onClose}
           className="absolute right-6 top-6 text-slate-400 hover:text-slate-600 text-xl font-bold"
