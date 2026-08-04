@@ -46,25 +46,6 @@ export default function Dashboard() {
         dashboard={stats}
       />
 
-      <KPISection
-        dashboard={stats}
-      />
-
-      <RecentOrganizationsSection
-        dashboard={stats}
-      />
-
-      <RecentPaymentsSection
-        dashboard={stats}
-      />
-
-      <RecentSubscriptionsSection
-        dashboard={stats}
-      />
-
-      <RecentActivitySection
-        dashboard={stats}
-      />
 
     </div>
   );

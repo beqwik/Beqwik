@@ -15,12 +15,12 @@ const initialDashboardState: DashboardStats = {
   memberGrowth: [],
   organizationGrowth: [],
 
-  kpis: {
-    trialOrganizations: 0,
-    activeOrganizations: 0,
-    expiredOrganizations: 0,
-    pendingPayments: 0,
-  },
+ kpis: {
+  trialOrganizations: 0,
+  activeOrganizations: 0,
+  expiringSoon: 0,
+  pendingPayments: 0,
+},
 
   recentOrganizations: [],
   recentPayments: [],

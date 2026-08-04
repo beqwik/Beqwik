@@ -2,7 +2,7 @@ import {
   Building2,
   Users,
   IndianRupee,
-  TrendingUp,
+  AlertTriangle,
 } from "lucide-react";
 
 import type { DashboardStats } from "../../../types/superAdmin/dashboard";
@@ -18,6 +18,9 @@ export default function StatsSection({
   dashboard,
   loading = false,
 }: Props) {
+  console.log("Dashboard Stats:", dashboard);
+console.log("KPIs:", dashboard.kpis);
+console.log("Expiring Soon:", dashboard.kpis?.expiringSoon);
   return (
     <div className="grid gap-6 xl:grid-cols-4 md:grid-cols-2">
 
@@ -52,14 +55,14 @@ export default function StatsSection({
       />
 
       <StatsCard
-        title="Renewal Rate"
-        value="87.5%"
-        loading={loading}
-        icon={<TrendingUp className="w-5 h-5" />}
-        iconBgColor="bg-emerald-50"
-        iconColor="text-emerald-600"
-        change="↑ 15.7% vs last month"
-      />
+  title="Expiring Soon"
+  value={dashboard.kpis.expiringSoon.toLocaleString()}
+  loading={loading}
+  icon={<AlertTriangle className="w-5 h-5" />}
+  iconBgColor="bg-orange-50"
+  iconColor="text-orange-600"
+  change="Next 7 days"
+/>
 
     </div>
   );
