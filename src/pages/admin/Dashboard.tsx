@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
+import { X } from "lucide-react";
 import { supabase } from "../../services/supabase";
 import { registerMember } from "../../services/member/memberAuth";
 import { dashboardService } from "../../services/dashboard/dashboardService";

@@ -206,6 +206,11 @@ export default function AppRouter() {
         />
 
         <Route
+          path="/member/sessions"
+          element={<MemberDashboard />}
+        />
+
+        <Route
           path="/member/profile"
           element={<MemberProfile />}
         />

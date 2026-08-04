@@ -168,7 +168,7 @@ export default function MemberDashboard() {
   // Fetch Academy Data (Classes, Assignments, Results, Materials)
   useEffect(() => {
     async function fetchAcademyData() {
-      if (!org?.id) return;
+      if (!org?.id || org?.organization_type !== "Academy") return;
       try {
         const [classes, regs, asgs, res, mats, notices] = await Promise.all([
           getAcademyClasses(org.id),
@@ -259,6 +259,27 @@ export default function MemberDashboard() {
     } else {
       setCheckedIn(true);
       setCheckInTime(new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" }));
+    }
+  };
+
+  const handleReserveSlot = async (slotId: string) => {
+    if (!org?.id || !member?.id) return;
+    const enrolledIds = bookings[slotId] || [];
+    const isBooked = enrolledIds.includes(member.id);
+
+    setBookingLoading(true);
+    try {
+      if (isBooked) {
+        await cancelGymBooking(slotId, member.id);
+      } else {
+        await bookGymSlot(slotId, member.id);
+      }
+      await fetchGymData();
+    } catch (e: any) {
+      console.error("Booking error:", e);
+      alert(e?.message || "Failed to update slot reservation.");
+    } finally {
+      setBookingLoading(false);
     }
   };
 

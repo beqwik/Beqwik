@@ -183,21 +183,21 @@ export default function MemberProfile() {
     ? "from-purple-600 via-indigo-600 to-indigo-800 shadow-purple-500/20"
     : isAcademy
     ? "from-indigo-600 via-indigo-700 to-purple-700 shadow-blue-500/20"
-    : "from-[#e05275] via-[#c84a85] to-[#b55fe6] shadow-blue-500/20";
+    : "from-blue-600 via-blue-700 to-indigo-700 shadow-blue-500/20";
 
   return (
     <div className="space-y-8">
       {/* Hero Header */}
-      <div className={`bg-gradient-to-r ${themeClass} rounded-2xl p-6 flex items-center gap-5 shadow-lg`}>
+      <div className={`bg-gradient-to-r ${themeClass} rounded-2xl p-6 flex flex-col sm:flex-row items-center sm:items-center gap-4 shadow-lg text-center sm:text-left`}>
         <div className="w-16 h-16 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center text-white font-black text-2xl shrink-0">
           {initials}
         </div>
         <div className="flex-1 min-w-0">
-          <h1 className="text-xl font-black text-white truncate">
+          <h1 className="text-xl font-black text-white">
             {member?.full_name || (isStaff ? "Faculty Member" : isAcademy ? "Academy Student" : "Gym Member")}
           </h1>
           <p className="text-white/80 text-sm mt-0.5 truncate">{member?.email}</p>
-          <div className="flex flex-wrap gap-2 mt-2">
+          <div className="flex flex-wrap gap-2 mt-2 justify-center sm:justify-start">
             <span className="px-2.5 py-0.5 rounded-full bg-white/20 text-white text-xs font-bold flex items-center gap-1">
               {isStaff ? "👨‍🏫" : isAcademy ? "🎓" : "🏋️"} {org?.name || (isAcademy ? "The Academy" : "Gym")}
             </span>
@@ -219,7 +219,7 @@ export default function MemberProfile() {
       </div>
 
       {/* Tab Nav */}
-      <div className="flex gap-1 bg-slate-100 rounded-xl p-1 w-fit">
+      <div className="flex gap-1 bg-slate-100 rounded-xl p-1 w-full">
         {tabs.map((t) => {
           const Icon = t.icon;
           const active = activeTab === t.key;
@@ -227,14 +227,14 @@ export default function MemberProfile() {
             <button
               key={t.key}
               onClick={() => setActiveTab(t.key)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition ${
+              className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-2.5 rounded-lg text-xs sm:text-sm font-semibold transition ${
                 active
                   ? "bg-white text-slate-900 shadow-sm"
                   : "text-slate-500 hover:text-slate-800"
               }`}
             >
-              <Icon className="w-4 h-4" />
-              {t.label}
+              <Icon className="w-4 h-4 shrink-0" />
+              <span className="truncate">{t.label}</span>
             </button>
           );
         })}
@@ -263,8 +263,8 @@ export default function MemberProfile() {
               const Icon = item.icon;
               return (
                 <div key={item.label} className="flex items-start gap-3">
-                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${isAcademy ? "bg-indigo-50" : "bg-[#fff0f5]"}`}>
-                    <Icon className={`w-4 h-4 ${isAcademy ? "text-indigo-600" : "text-[#e05275]"}`} />
+                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${isAcademy ? "bg-indigo-50" : "bg-blue-50"}`}>
+                    <Icon className={`w-4 h-4 ${isAcademy ? "text-indigo-600" : "text-blue-600"}`} />
                   </div>
                   <div>
                     <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{item.label}</p>
@@ -283,6 +283,26 @@ export default function MemberProfile() {
                   : "—"}
               </p>
             </div>
+
+            {!isAcademy && (
+              <div className="pt-4 border-t border-slate-100 space-y-2">
+                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-1">Support & Legal</p>
+                <div className="space-y-1 text-xs font-medium text-slate-600">
+                  <a href="#help" onClick={(e) => { e.preventDefault(); alert("Help & Support: Reach us at support@beqwik.com or +91 1800 123 4567"); }} className="flex items-center gap-2 p-2 hover:bg-slate-50 rounded-lg transition">
+                    ❓ Help & Support
+                  </a>
+                  <a href="#about" onClick={(e) => { e.preventDefault(); alert("About Gym: Powered by BeQwik Member Portal v2.4.0"); }} className="flex items-center gap-2 p-2 hover:bg-slate-50 rounded-lg transition">
+                    ℹ️ About Gym
+                  </a>
+                  <a href="#privacy" onClick={(e) => { e.preventDefault(); alert("Privacy Policy: Your member records and payment details are encrypted and secure."); }} className="flex items-center gap-2 p-2 hover:bg-slate-50 rounded-lg transition">
+                    🔒 Privacy Policy
+                  </a>
+                  <a href="#terms" onClick={(e) => { e.preventDefault(); alert("Terms & Conditions: Please adhere to gym safety guidelines and slot timings."); }} className="flex items-center gap-2 p-2 hover:bg-slate-50 rounded-lg transition">
+                    📄 Terms & Conditions
+                  </a>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Edit Form */}
@@ -540,7 +560,7 @@ export default function MemberProfile() {
                   </div>
                   <div
                     onClick={() => item.setter((v: boolean) => !v)}
-                    className={`w-11 h-6 rounded-full relative cursor-pointer transition-colors shrink-0 ml-4 ${item.value ? (isAcademy ? "bg-indigo-600" : "bg-[#e05275]") : "bg-slate-300"}`}
+                    className={`w-11 h-6 rounded-full relative cursor-pointer transition-colors shrink-0 ml-4 ${item.value ? "bg-blue-600" : "bg-slate-300"}`}
                   >
                     <div className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow-sm transition-transform ${item.value ? "translate-x-5" : "translate-x-1"}`} />
                   </div>

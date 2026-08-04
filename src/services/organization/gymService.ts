@@ -180,16 +180,24 @@ export async function getGymBookings(organizationId: string): Promise<Record<str
 }
 
 export async function bookGymSlot(slotId: string, memberId: string): Promise<void> {
-  // Check capacity limits before booking
+  // Step 1: Get slot capacity
   const { data: slot, error: slotErr } = await supabase
     .from("gym_slots")
-    .select("max_capacity, gym_slot_bookings(id)")
+    .select("max_capacity")
     .eq("id", slotId)
     .single();
 
   if (slotErr) throw slotErr;
 
-  const currentBookings = slot.gym_slot_bookings?.length || 0;
+  // Step 2: Count current bookings separately
+  const { count, error: countErr } = await supabase
+    .from("gym_slot_bookings")
+    .select("id", { count: "exact", head: true })
+    .eq("slot_id", slotId);
+
+  if (countErr) throw countErr;
+
+  const currentBookings = count ?? 0;
   if (currentBookings >= slot.max_capacity) {
     throw new Error(`Booking failed: Class capacity limit of ${slot.max_capacity} reached.`);
   }
