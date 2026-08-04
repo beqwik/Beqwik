@@ -1,3 +1,5 @@
+import { Building2, CheckCircle2 } from "lucide-react";
+
 interface SettingsTabProps {
   organization: any;
 
@@ -42,7 +44,7 @@ export default function SettingsTab({
     <div className="grid md:grid-cols-3 gap-8 animate-fadeIn">
       {/* ORG CODE DISPLAY */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 md:col-span-1 h-fit text-center">
-        <span className="text-4xl">🏢</span>
+        <span className="text-4xl"><Building2 className="w-5 h-5 inline-block" /></span>
         <h3 className="font-extrabold text-slate-900 text-lg mt-3">
           {organization?.organization_name}
         </h3>
@@ -154,13 +156,13 @@ export default function SettingsTab({
             <button
               type="submit"
               disabled={savingSettings}
-              className="px-6 py-3 bg-gradient-to-r from-[#e05275] to-[#b55fe6] hover:opacity-90 text-white rounded-xl text-sm font-semibold transition disabled:opacity-50 shadow-md shadow-[#e05275]/20"
+              className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold transition disabled:opacity-50 shadow-md shadow-blue-500/20"
             >
               {savingSettings ? "Saving..." : "Save Changes"}
             </button>
             {settingsSuccess && (
               <span className="text-green-600 text-sm font-medium flex items-center gap-1">
-                ✅ Organization settings updated!
+                <CheckCircle2 className="w-5 h-5 inline-block text-emerald-500" /> Organization settings updated!
               </span>
             )}
           </div>

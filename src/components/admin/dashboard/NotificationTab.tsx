@@ -1,3 +1,4 @@
+import { Megaphone } from "lucide-react";
 interface NotificationTabProps {
   members: any[];
   recentNotifications: any[];
@@ -31,7 +32,7 @@ export default function NotificationTab({
       {/* BROADCAST ALERT COMPONENT */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 md:col-span-1 h-fit">
         <h3 className="font-bold text-slate-800 text-lg mb-4">
-          📢 Broadcast New Alert
+          <Megaphone className="w-5 h-5 inline-block mr-2" /> Broadcast New Alert
         </h3>
         <form onSubmit={handleSendAlert} className="space-y-4">
           <div>
@@ -65,7 +66,7 @@ export default function NotificationTab({
           <button
             type="submit"
             disabled={sendingAlert}
-            className="w-full py-3 bg-gradient-to-r from-[#e05275] to-[#b55fe6] hover:opacity-90 text-white rounded-xl text-sm font-semibold transition disabled:opacity-50 shadow-md shadow-[#e05275]/20"
+            className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold transition disabled:opacity-50 shadow-md shadow-blue-500/20"
           >
             {sendingAlert ? "Broadcasting..." : "Send Announcement"}
           </button>
@@ -107,7 +108,7 @@ export default function NotificationTab({
           </div>
         ) : (
           <div className="text-center py-12 text-slate-400">
-            📢 No alerts have been sent yet.
+            <Megaphone className="w-5 h-5 inline-block mr-2" /> No alerts have been sent yet.
           </div>
         )}
       </div>

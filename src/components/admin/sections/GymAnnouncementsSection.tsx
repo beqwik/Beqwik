@@ -71,7 +71,7 @@ function CreateGymAnnouncementModal({ isOpen, onClose, onSubmit }: CreateModalPr
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
       <div className="bg-white rounded-[24px] border border-slate-100 shadow-2xl w-full max-w-lg overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="p-6 bg-gradient-to-r from-[#e05275] via-[#c44f8e] to-[#b55fe6] text-white flex justify-between items-center">
+        <div className="p-6 bg-blue-600 hover:bg-blue-700 text-white flex justify-between items-center">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center">
               <Megaphone className="w-5 h-5 text-white" />
@@ -165,7 +165,7 @@ function CreateGymAnnouncementModal({ isOpen, onClose, onSubmit }: CreateModalPr
             <button
               type="submit"
               disabled={submitting}
-              className="px-6 py-2.5 bg-gradient-to-r from-[#e05275] to-[#b55fe6] hover:opacity-95 text-white text-xs font-black rounded-[14px] shadow-md shadow-[#e05275]/20 transition flex items-center gap-2 disabled:opacity-50"
+              className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 hover:opacity-95 text-white text-xs font-black rounded-[14px] shadow-md shadow-blue-500/20 transition flex items-center gap-2 disabled:opacity-50"
             >
               {submitting ? (
                 <>
@@ -260,7 +260,7 @@ export default function GymAnnouncementsSection({
         </div>
         <button
           onClick={() => setShowModal(true)}
-          className="px-4 py-2.5 bg-gradient-to-r from-[#e05275] to-[#b55fe6] hover:opacity-90 text-white rounded-[14px] text-xs font-extrabold transition flex items-center gap-2 shadow-md shadow-[#e05275]/20 shrink-0"
+          className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-[14px] text-xs font-extrabold transition flex items-center gap-2 shadow-md shadow-blue-500/20 shrink-0"
         >
           <Plus className="w-4 h-4" /> New Announcement
         </button>

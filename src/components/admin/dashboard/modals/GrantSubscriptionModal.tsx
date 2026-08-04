@@ -185,7 +185,7 @@ export default function GrantSubscriptionModal({
             <button
               type="submit"
               disabled={addingSub}
-              className="flex-1 py-3 bg-gradient-to-r from-[#e05275] to-[#b55fe6] hover:opacity-90 text-white rounded-xl text-sm font-semibold transition disabled:opacity-50 shadow-md shadow-[#e05275]/20"
+              className="flex-1 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold transition disabled:opacity-50 shadow-md shadow-blue-500/20"
             >
               {addingSub ? "Granting Plan..." : "Grant Sub"}
             </button>

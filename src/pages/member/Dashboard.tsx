@@ -302,7 +302,7 @@ export default function MemberDashboard() {
           <div className="flex flex-wrap items-center gap-3">
             <button
               onClick={() => { setEditingItem(null); setActiveModal("assignment"); }}
-              className="px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:opacity-95 text-white rounded-[14px] text-xs font-extrabold transition flex items-center gap-2 shadow-md shadow-indigo-500/20 cursor-pointer"
+              className="px-4 py-2 bg-blue-600 hover:opacity-95 text-white rounded-[14px] text-xs font-extrabold transition flex items-center gap-2 shadow-md shadow-blue-500/20 cursor-pointer"
             >
               <Plus className="w-4 h-4" /> Create Homework
             </button>

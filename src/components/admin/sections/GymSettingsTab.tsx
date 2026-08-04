@@ -1,19 +1,6 @@
 import { useState } from "react";
 import { supabase } from "../../../services/supabase";
-import {
-  Building2,
-  Mail,
-  Phone,
-  MapPin,
-  Clock,
-  Shield,
-  Copy,
-  Check,
-  Save,
-  Eye,
-  EyeOff,
-  AlertTriangle,
-} from "lucide-react";
+import { Building2, Mail, Phone, MapPin, Clock, Shield, Copy, Check, Save, Eye, EyeOff, AlertTriangle, , Trophy, Target, CheckCircle2, XCircle, Wrench, X, Users, Megaphone } from "lucide-react";
 
 interface GymSettingsTabProps {
   organization: any;
@@ -147,9 +134,9 @@ export default function GymSettingsTab({
         {/* Left: Org Card + Nav */}
         <div className="lg:col-span-1 space-y-4">
           {/* Org Identity Card */}
-          <div className="bg-gradient-to-br from-[#e05275] to-[#b55fe6] rounded-2xl p-5 text-white shadow-lg shadow-[#e05275]/20">
+          <div className="bg-gradient-to-br from-[#e05275] to-[#b55fe6] rounded-2xl p-5 text-white shadow-lg shadow-blue-500/20">
             <div className="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur flex items-center justify-center text-3xl font-black mb-3">
-              🏋️
+              <Target className="w-4 h-4 inline-block" />️
             </div>
             <h3 className="font-black text-lg leading-tight">{organization?.organization_name}</h3>
             <p className="text-white/70 text-xs mt-0.5">Gym / Fitness Center</p>
@@ -314,7 +301,7 @@ export default function GymSettingsTab({
                   <button
                     type="submit"
                     disabled={savingSettings}
-                    className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#e05275] to-[#b55fe6] hover:opacity-90 text-white rounded-xl text-sm font-bold transition disabled:opacity-50 shadow-md shadow-[#e05275]/20"
+                    className="flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-bold transition disabled:opacity-50 shadow-md shadow-blue-500/20"
                   >
                     <Save className="w-4 h-4" />
                     {savingSettings ? "Saving..." : "Save Changes"}
@@ -382,7 +369,7 @@ export default function GymSettingsTab({
                   <button
                     onClick={handleSaveHours}
                     disabled={savingHours}
-                    className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#e05275] to-[#b55fe6] hover:opacity-90 text-white rounded-xl text-sm font-bold transition disabled:opacity-50 shadow-md shadow-[#e05275]/20"
+                    className="flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-bold transition disabled:opacity-50 shadow-md shadow-blue-500/20"
                   >
                     <Save className="w-4 h-4" />
                     {savingHours ? "Saving..." : "Save Hours"}
@@ -462,7 +449,7 @@ export default function GymSettingsTab({
                     <button
                       type="submit"
                       disabled={savingPassword}
-                      className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#e05275] to-[#b55fe6] hover:opacity-90 text-white rounded-xl text-sm font-bold transition disabled:opacity-50 shadow-md shadow-[#e05275]/20"
+                      className="flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-bold transition disabled:opacity-50 shadow-md shadow-blue-500/20"
                     >
                       <Shield className="w-4 h-4" />
                       {savingPassword ? "Updating..." : "Update Password"}

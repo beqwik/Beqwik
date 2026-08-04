@@ -1,19 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { 
-  Dumbbell, 
-  Calendar, 
-  Plus, 
-  Clock, 
-  Users, 
-  Check, 
-  X, 
-  AlertTriangle, 
-  Activity,
-  Trash2,
-  UserCheck,
-  ShieldCheck,
-  UserPlus
-} from "lucide-react";
+import { Dumbbell, Calendar, Plus, Clock, Users, Check, X, AlertTriangle, Activity, Trash2, UserCheck, ShieldCheck, UserPlus, Trophy, Target, Mail, Phone, CheckCircle2, XCircle, Wrench, Megaphone } from "lucide-react";
 import {
   getGymSlots,
   createGymSlot,
@@ -514,7 +500,7 @@ export default function GymSection({ activeTab, organizationId, members }: GymSe
                                       className="text-slate-400 hover:text-red-500 transition text-[11px] font-bold"
                                       title="Cancel Booking"
                                     >
-                                      ✕
+                                      <X className="w-4 h-4 inline-block" />
                                     </button>
                                   </div>
                                 );
@@ -576,7 +562,7 @@ export default function GymSection({ activeTab, organizationId, members }: GymSe
                   onClick={() => setShowAddSlot(false)}
                   className="absolute right-6 top-6 text-slate-400 hover:text-slate-600 text-xl font-bold"
                 >
-                  ✕
+                  <X className="w-4 h-4 inline-block" />
                 </button>
                 <h3 className="text-xl font-bold text-slate-900 mb-1">Create Training Slot</h3>
                 <p className="text-slate-500 text-xs mb-5">Members can view and reserve this slot on their dashboard.</p>
@@ -697,7 +683,7 @@ export default function GymSection({ activeTab, organizationId, members }: GymSe
                   onClick={() => setSelectedSlotId(null)}
                   className="absolute right-6 top-6 text-slate-400 hover:text-slate-600 text-xl font-bold"
                 >
-                  ✕
+                  <X className="w-4 h-4 inline-block" />
                 </button>
                 <h3 className="text-xl font-bold text-slate-900 mb-1">Enroll Member into Slot</h3>
                 <p className="text-slate-500 text-xs mb-5">Select a registered gym member to reserve this slot.</p>
@@ -784,14 +770,14 @@ export default function GymSection({ activeTab, organizationId, members }: GymSe
                 <div className="mt-4">
                   <h3 className="font-extrabold text-slate-900 text-lg">{trainer.full_name}</h3>
                   <span className="inline-block px-2.5 py-1 bg-indigo-50 text-indigo-700 text-xs font-bold rounded-lg mt-1">
-                    🎯 {trainer.specialization}
+                    <Target className="w-5 h-5 inline-block text-red-500" /> {trainer.specialization}
                   </span>
                   {trainer.bio && <p className="text-slate-500 text-xs mt-2 line-clamp-2">{trainer.bio}</p>}
                 </div>
 
                 <div className="mt-4 pt-3 border-t border-slate-100 space-y-1 text-xs text-slate-500">
-                  {trainer.email && <p>✉️ {trainer.email}</p>}
-                  {trainer.phone && <p>📞 {trainer.phone}</p>}
+                  {trainer.email && <p><Mail className="w-4 h-4 inline-block text-slate-400" />️ {trainer.email}</p>}
+                  {trainer.phone && <p><Phone className="w-4 h-4 inline-block text-slate-400" /> {trainer.phone}</p>}
                 </div>
 
                 <div className="mt-5 pt-3 border-t border-slate-100 flex justify-end">
@@ -822,7 +808,7 @@ export default function GymSection({ activeTab, organizationId, members }: GymSe
                   onClick={() => setShowAddTrainer(false)}
                   className="absolute right-6 top-6 text-slate-400 hover:text-slate-600 text-xl font-bold"
                 >
-                  ✕
+                  <X className="w-4 h-4 inline-block" />
                 </button>
                 <h3 className="text-2xl font-bold text-slate-900 mb-2">Add New Trainer</h3>
                 <p className="text-slate-500 text-sm mb-6">Register a personal trainer or group instructor.</p>
@@ -990,7 +976,7 @@ export default function GymSection({ activeTab, organizationId, members }: GymSe
                   onClick={() => setShowAddEquipment(false)}
                   className="absolute right-6 top-6 text-slate-400 hover:text-slate-600 text-xl font-bold"
                 >
-                  ✕
+                  <X className="w-4 h-4 inline-block" />
                 </button>
                 <h3 className="text-2xl font-bold text-slate-900 mb-2">Log New Equipment</h3>
                 <p className="text-slate-500 text-sm mb-6">Add machine or weight set to tracking roster.</p>

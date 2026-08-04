@@ -222,7 +222,7 @@ export default function ExploreCourses() {
                         ? "bg-slate-100 hover:bg-rose-50 text-slate-700 hover:text-rose-600 border border-slate-200"
                         : isFull
                         ? "bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200"
-                        : "bg-gradient-to-r from-indigo-600 to-purple-600 hover:opacity-95 text-white shadow-md shadow-indigo-500/20"
+                        : "bg-blue-600 hover:opacity-95 text-white shadow-md shadow-blue-500/20"
                     }`}
                   >
                     {processingId === cls.id ? (

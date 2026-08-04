@@ -1,25 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import {
-  ChevronLeft,
-  ChevronRight,
-  Calendar as CalendarIcon,
-  Search,
-  Filter,
-  Plus,
-  Clock,
-  User,
-  X,
-  AlertTriangle,
-  CheckCircle2,
-  Trash2,
-  Edit3,
-  UserCheck,
-  Dumbbell,
-  Sparkles,
-  Layers,
-  Check
-} from "lucide-react";
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, Search, Filter, Plus, Clock, User, X, AlertTriangle, CheckCircle2, Trash2, Edit3, UserCheck, Dumbbell, Sparkles, Layers, Check, Trophy, Target, Mail, Phone, XCircle, Wrench, Users, Megaphone } from "lucide-react";
 import {
   getTrainerSessions,
   createTrainerSession,
@@ -292,7 +273,7 @@ export default function TrainerScheduleManager({ organizationId }: TrainerSchedu
 
     if (conflict) {
       setFormConflictWarning(
-        `⚠️ Scheduling Conflict: ${trainer} already has "${conflict.session_name}" with ${conflict.member_name} from ${conflict.start_time} to ${conflict.end_time}.`
+        `<AlertTriangle className="w-5 h-5 inline-block text-amber-500" />️ Scheduling Conflict: ${trainer} already has "${conflict.session_name}" with ${conflict.member_name} from ${conflict.start_time} to ${conflict.end_time}.`
       );
     } else {
       setFormConflictWarning(null);
@@ -458,7 +439,7 @@ export default function TrainerScheduleManager({ organizationId }: TrainerSchedu
                 setFormConflictWarning(null);
                 setShowNewModal(true);
               }}
-              className="px-4 py-2.5 bg-gradient-to-r from-indigo-600 via-indigo-700 to-purple-700 hover:opacity-95 text-white rounded-[14px] text-xs font-extrabold transition flex items-center gap-2 shadow-md shadow-indigo-500/20"
+              className="px-4 py-2.5 bg-blue-600 hover:opacity-95 text-white rounded-[14px] text-xs font-extrabold transition flex items-center gap-2 shadow-md shadow-blue-500/20"
             >
               <Plus className="w-4 h-4" /> Add Session
             </button>
@@ -723,7 +704,7 @@ export default function TrainerScheduleManager({ organizationId }: TrainerSchedu
               className="bg-white w-full max-w-md h-full shadow-2xl flex flex-col overflow-hidden"
             >
               {/* Drawer Header */}
-              <div className="p-6 bg-gradient-to-r from-indigo-600 via-indigo-700 to-purple-700 text-white flex justify-between items-center">
+              <div className="p-6 bg-blue-600 text-white flex justify-between items-center">
                 <div>
                   <span className="text-[10px] font-extrabold uppercase tracking-wider text-indigo-200">
                     Session Details
@@ -856,7 +837,7 @@ export default function TrainerScheduleManager({ organizationId }: TrainerSchedu
               className="bg-white rounded-[24px] border border-slate-100 shadow-2xl w-full max-w-lg overflow-hidden flex flex-col"
             >
               {/* Modal Header */}
-              <div className="p-6 bg-gradient-to-r from-indigo-600 via-indigo-700 to-purple-700 text-white flex justify-between items-center">
+              <div className="p-6 bg-blue-600 text-white flex justify-between items-center">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center">
                     <Sparkles className="w-5 h-5 text-yellow-300" />
@@ -1053,7 +1034,7 @@ export default function TrainerScheduleManager({ organizationId }: TrainerSchedu
                   <button
                     type="submit"
                     disabled={savingSession}
-                    className="px-6 py-2.5 bg-gradient-to-r from-indigo-600 via-indigo-700 to-purple-700 hover:opacity-95 text-white text-xs font-extrabold rounded-[14px] shadow-md shadow-indigo-500/20 transition disabled:opacity-50"
+                    className="px-6 py-2.5 bg-blue-600 hover:opacity-95 text-white text-xs font-extrabold rounded-[14px] shadow-md shadow-blue-500/20 transition disabled:opacity-50"
                   >
                     {savingSession ? "Saving..." : "Save Session"}
                   </button>

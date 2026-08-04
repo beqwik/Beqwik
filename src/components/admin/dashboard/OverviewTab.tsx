@@ -1,19 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import {
-  Users,
-  CreditCard,
-  IndianRupee,
-  Calendar,
-  UserPlus,
-  Dumbbell,
-  UserCheck,
-  Bell,
-  Plus,
-  ArrowUpRight,
-  ChevronRight,
-  Activity
-} from "lucide-react";
+import { Users, CreditCard, IndianRupee, Calendar, UserPlus, Dumbbell, UserCheck, Bell, Plus, ArrowUpRight, ChevronRight, Activity, User, Home, GraduationCap, Briefcase, Search, Hand, Megaphone, Building2, CheckCircle2 } from "lucide-react";
 import { getGymSlots, getGymBookings } from "../../../services/organization/gymService";
 
 interface OverviewTabProps {
@@ -127,9 +114,9 @@ export default function OverviewTab({
   const isHostelMess = orgType === "Hostel" || orgType === "Mess";
 
   const studentLabel = isGym ? "Members" : isHostelMess ? "Residents" : "Students";
-  const studentIcon = isGym ? "🏋️‍♂️" : isHostelMess ? "🏠" : "🎓";
+  const studentIcon = isGym ? <Dumbbell className="w-4 h-4" /> : isHostelMess ? <Home className="w-4 h-4" /> : <GraduationCap className="w-4 h-4" />;
   const staffLabel = isGym ? "Trainers" : isHostelMess ? "Staff" : "Staff";
-  const staffIcon = isGym ? "👨‍🏫" : "💼";
+  const staffIcon = isGym ? <UserCheck className="w-4 h-4" /> : <Briefcase className="w-4 h-4" />;
 
   const memberCount = members.filter(m => m.role === 'student' || !m.role).length;
   const staffCount = members.filter(m => m.role === 'staff').length;
@@ -140,7 +127,7 @@ export default function OverviewTab({
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
-            Good morning, Admin <span className="inline-block">👋</span>
+            Good morning, Admin <span className="inline-block"><Hand className="w-6 h-6 inline-block text-amber-500 ml-2" /></span>
           </h1>
           <p className="text-slate-500 text-sm mt-1">
             Here's what's happening at{" "}
@@ -476,7 +463,7 @@ export default function OverviewTab({
             </div>
           ) : (
             <div className="text-center py-8 text-slate-400 text-xs">
-              👥 No members registered yet.
+              <Users className="w-5 h-5 inline-block" /> No members registered yet.
             </div>
           )}
         </div>
@@ -513,7 +500,7 @@ export default function OverviewTab({
             </div>
           ) : (
             <div className="text-center py-8 text-slate-400 text-xs">
-              📢 No announcements sent yet.
+              <Megaphone className="w-5 h-5 inline-block mr-2" /> No announcements sent yet.
             </div>
           )}
         </div>

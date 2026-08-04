@@ -1,4 +1,5 @@
-import React from "react";
+import React from "react";import { Dumbbell, Home, GraduationCap, UserCheck, Briefcase } from "lucide-react";
+
 
 interface AddMemberModalProps {
   open: boolean;
@@ -48,9 +49,9 @@ export default function AddMemberModal({
   const isHostelMess = orgType === "Hostel" || orgType === "Mess";
 
   const studentLabel = isGym ? "Gym Member" : isHostelMess ? "Resident" : "Student";
-  const studentIcon = isGym ? "🏋️‍♂️" : isHostelMess ? "🏠" : "🎓";
+  const studentIcon = isGym ? <Dumbbell className="w-4 h-4" /> : isHostelMess ? <Home className="w-4 h-4" /> : <GraduationCap className="w-4 h-4" />;
   const staffLabel = isGym ? "Trainer / Staff" : isHostelMess ? "Staff Member" : "Staff / Teacher";
-  const staffIcon = isGym ? "👨‍🏫" : "💼";
+  const staffIcon = isGym ? <UserCheck className="w-4 h-4" /> : <Briefcase className="w-4 h-4" />;
   const modalSubtitle = isGym
     ? "Create credentials & profile for a Gym Member or Trainer."
     : isHostelMess
@@ -173,7 +174,7 @@ export default function AddMemberModal({
             <button
               type="submit"
               disabled={addingMember}
-              className="flex-1 py-3 bg-gradient-to-r from-[#e05275] to-[#b55fe6] hover:opacity-90 text-white rounded-xl text-sm font-semibold transition shadow-md shadow-[#e05275]/20 disabled:opacity-50"
+              className="flex-1 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold transition shadow-md shadow-blue-500/20 disabled:opacity-50"
             >
               {addingMember ? "Registering..." : "Add Member"}
             </button>

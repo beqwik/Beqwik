@@ -1,3 +1,4 @@
+import { Wrench } from "lucide-react";
 
 interface DefaultSectionProps {
   activeTab: string;
@@ -7,7 +8,7 @@ interface DefaultSectionProps {
 export default function DefaultSection({ activeTab, organizationId }: DefaultSectionProps) {
   return (
     <div className="bg-white border border-slate-200 rounded-3xl p-8 text-center space-y-4 max-w-lg mx-auto shadow-sm animate-fadeIn">
-      <div className="text-5xl">🛠️</div>
+      <div className="text-5xl"><Wrench className="w-5 h-5 inline-block text-slate-500" />️</div>
       <h3 className="text-xl font-bold text-slate-800">
         Sub-Dashboard Under Construction
       </h3>
