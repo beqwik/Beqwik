@@ -126,7 +126,7 @@ if (loading) {
 
    <div className="bg-white rounded-3xl border border-slate-100 overflow-hidden max-w-6xl mx-auto">
 
-  <div className="overflow-x-auto flex justify-center">
+  <div className="overflow-x-auto ">
 
     <table className="table-fixed w-[1150px]">
 
@@ -134,23 +134,23 @@ if (loading) {
 
         <tr className="text-left">
 
-         <th className="w-[25%] px-6 py-4 text-xs font-semibold text-slate-500 uppercase">
+         <th className="w-[30%] px-6 py-4 text-xs font-semibold text-slate-500 uppercase">
   Template
 </th>
 
-<th className="w-[12%] px-6 py-4 text-xs font-semibold text-slate-500 uppercase">
+<th className="w-[15%] px-6 py-4 text-xs font-semibold text-slate-500 uppercase">
   Channel
 </th>
 
-<th className="w-[12%] px-6 py-4 text-xs font-semibold text-slate-500 uppercase">
+<th className="w-[15%] px-6 py-4 text-xs font-semibold text-slate-500 uppercase">
   Status
 </th>
 
-<th className="w-[14%] px-6 py-4 text-xs font-semibold text-slate-500 uppercase">
+<th className="w-[15%] px-6 py-4 text-xs font-semibold text-slate-500 uppercase">
   Updated
 </th>
 
-<th className="w-[20%] px-30 py-4 text-xs font-semibold text-slate-500 uppercase">
+<th className="w-[24%] px-30 py-4 text-xs font-semibold text-slate-500 uppercase">
   Actions
 </th>
 

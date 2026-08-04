@@ -17,9 +17,9 @@ export default function KPISection({
       value: dashboard.kpis.activeOrganizations,
     },
     {
-      title: "Expired Organizations",
-      value: dashboard.kpis.expiredOrganizations,
-    },
+  title: "Expiring Soon (7 Days)",
+  value: dashboard.kpis.expiringSoon,
+},
     {
       title: "Pending Payments",
       value: dashboard.kpis.pendingPayments,
