@@ -182,8 +182,8 @@ export default function MemberProfile() {
   const themeClass = isStaff
     ? "from-purple-600 via-indigo-600 to-indigo-800 shadow-purple-500/20"
     : isAcademy
-    ? "from-indigo-600 via-indigo-700 to-purple-700 shadow-indigo-500/20"
-    : "from-[#e05275] via-[#c84a85] to-[#b55fe6] shadow-[#e05275]/20";
+    ? "from-indigo-600 via-indigo-700 to-purple-700 shadow-blue-500/20"
+    : "from-[#e05275] via-[#c84a85] to-[#b55fe6] shadow-blue-500/20";
 
   return (
     <div className="space-y-8">
@@ -367,8 +367,8 @@ export default function MemberProfile() {
                   disabled={saving}
                   className={`flex items-center gap-2 px-6 py-3 text-white rounded-xl text-sm font-bold transition disabled:opacity-50 shadow-md ${
                     isAcademy
-                      ? "bg-gradient-to-r from-indigo-600 to-purple-600 hover:opacity-90 shadow-indigo-500/20"
-                      : "bg-gradient-to-r from-[#e05275] to-[#b55fe6] hover:opacity-90 shadow-[#e05275]/20"
+                      ? "bg-blue-600 hover:opacity-90 shadow-blue-500/20"
+                      : "bg-blue-600 hover:bg-blue-700 shadow-blue-500/20"
                   }`}
                 >
                   <Save className="w-4 h-4" />
@@ -474,8 +474,8 @@ export default function MemberProfile() {
                   disabled={savingPassword}
                   className={`flex items-center gap-2 px-6 py-3 text-white rounded-xl text-sm font-bold transition disabled:opacity-50 shadow-md ${
                     isAcademy
-                      ? "bg-gradient-to-r from-indigo-600 to-purple-600 hover:opacity-90 shadow-indigo-500/20"
-                      : "bg-gradient-to-r from-[#e05275] to-[#b55fe6] hover:opacity-90 shadow-[#e05275]/20"
+                      ? "bg-blue-600 hover:opacity-90 shadow-blue-500/20"
+                      : "bg-blue-600 hover:bg-blue-700 shadow-blue-500/20"
                   }`}
                 >
                   <Shield className="w-4 h-4" />
@@ -552,8 +552,8 @@ export default function MemberProfile() {
                   onClick={handleSaveNotifPrefs}
                   className={`flex items-center gap-2 px-6 py-3 text-white rounded-xl text-sm font-bold transition shadow-md ${
                     isAcademy
-                      ? "bg-gradient-to-r from-indigo-600 to-purple-600 hover:opacity-90 shadow-indigo-500/20"
-                      : "bg-gradient-to-r from-[#e05275] to-[#b55fe6] hover:opacity-90 shadow-[#e05275]/20"
+                      ? "bg-blue-600 hover:opacity-90 shadow-blue-500/20"
+                      : "bg-blue-600 hover:bg-blue-700 shadow-blue-500/20"
                   }`}
                 >
                   <Save className="w-4 h-4" />

@@ -117,7 +117,7 @@ export default function MyCourses() {
           </div>
           <Link
             to="/member/courses"
-            className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:opacity-95 text-white rounded-[14px] text-xs font-extrabold shadow-md shadow-indigo-500/20 transition"
+            className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 hover:opacity-95 text-white rounded-[14px] text-xs font-extrabold shadow-md shadow-blue-500/20 transition"
           >
             <span>Explore Available Courses</span>
             <ArrowRight className="w-4 h-4" />

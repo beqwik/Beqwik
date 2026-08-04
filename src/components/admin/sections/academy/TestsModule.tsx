@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Award, Plus, Clock, FileText } from "lucide-react";
+import { Award, Plus, Clock, FileText, Trophy, Target, Mail, Phone, AlertTriangle, CheckCircle2, XCircle, Wrench, X, Users, Megaphone } from "lucide-react";
 import type { TestEngineExam } from "../../../../services/organization/academyService";
 import CreateTestModal from "./modals/CreateTestModal";
 
@@ -34,7 +34,7 @@ export default function TestsModule({ tests, onCreateTest }: TestsModuleProps) {
                 test.status === "live" ? "bg-rose-100 text-rose-700 animate-pulse" :
                 test.status === "scheduled" ? "bg-indigo-100 text-indigo-700" : "bg-slate-100 text-slate-600"
               }`}>
-                {test.status === "live" ? "🔴 Live Now" : test.status}
+                {test.status === "live" ? <><span className="w-3 h-3 rounded-full bg-red-500 inline-block"></span> Live Now</> : test.status}
               </span>
               <span className="text-xs font-bold text-slate-400">{test.subject}</span>
             </div>

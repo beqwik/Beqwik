@@ -75,7 +75,7 @@ export default function CreateStudyMaterialModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
       <div className="bg-white rounded-[24px] border border-slate-100 shadow-2xl w-full max-w-lg overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="p-6 bg-gradient-to-r from-indigo-600 via-indigo-700 to-purple-700 text-white flex justify-between items-center relative">
+        <div className="p-6 bg-blue-600 text-white flex justify-between items-center relative">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center text-white font-bold">
               <FolderDown className="w-5 h-5 text-amber-300" />
@@ -184,7 +184,7 @@ export default function CreateStudyMaterialModal({
             <button
               type="submit"
               disabled={submitting}
-              className="px-6 py-2.5 bg-gradient-to-r from-indigo-600 via-indigo-700 to-purple-700 hover:opacity-95 text-white text-xs font-black rounded-[14px] shadow-md shadow-indigo-500/20 transition flex items-center gap-2 disabled:opacity-50"
+              className="px-6 py-2.5 bg-blue-600 hover:opacity-95 text-white text-xs font-black rounded-[14px] shadow-md shadow-blue-500/20 transition flex items-center gap-2 disabled:opacity-50"
             >
               {submitting ? (
                 <>

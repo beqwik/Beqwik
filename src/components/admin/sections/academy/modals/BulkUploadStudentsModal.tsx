@@ -193,7 +193,7 @@ export default function BulkUploadStudentsModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
       <div className="bg-white rounded-[24px] border border-slate-100 shadow-2xl w-full max-w-3xl overflow-hidden flex flex-col max-h-[90vh]">
         {/* Header */}
-        <div className="p-6 bg-gradient-to-r from-indigo-600 via-indigo-700 to-purple-700 text-white flex justify-between items-center shrink-0">
+        <div className="p-6 bg-blue-600 text-white flex justify-between items-center shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center text-white font-bold">
               <Users className="w-5 h-5 text-indigo-200" />
@@ -350,7 +350,7 @@ export default function BulkUploadStudentsModal({
             <button
               onClick={handleSubmit}
               disabled={uploading || validRows.length === 0}
-              className="px-6 py-2 bg-gradient-to-r from-indigo-600 via-indigo-700 to-purple-700 hover:opacity-95 text-white text-xs font-black rounded-[12px] shadow-md shadow-indigo-500/20 transition flex items-center gap-2 disabled:opacity-50"
+              className="px-6 py-2 bg-blue-600 hover:opacity-95 text-white text-xs font-black rounded-[12px] shadow-md shadow-blue-500/20 transition flex items-center gap-2 disabled:opacity-50"
             >
               {uploading ? (
                 <>
