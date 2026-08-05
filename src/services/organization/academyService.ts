@@ -1052,6 +1052,7 @@ export async function createAcademyClass(
   // 2. Insert into `academy_classes` table
   try {
     const classPayload: any = {
+      id: createdClass.id,
       class_name: cls.className,
       instructor_name: cls.instructorName,
       timing: cls.timing,

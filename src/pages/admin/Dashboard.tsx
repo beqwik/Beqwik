@@ -155,6 +155,7 @@ export default function AdminDashboard() {
   const [courseName, setCourseName] = useState("");
   const [courseInstructor, setCourseInstructor] = useState("");
   const [courseDuration, setCourseDuration] = useState("6 Months");
+  const [customDuration, setCustomDuration] = useState("");
   const [courseStartDate, setCourseStartDate] = useState("2026-08-01");
   const [courseEndDate, setCourseEndDate] = useState("2027-02-01");
   const [courseTiming, setCourseTiming] = useState("09:00 - 10:30 AM");
@@ -261,7 +262,7 @@ export default function AdminDashboard() {
         instructorName: courseInstructor.trim() || "Faculty Instructor",
         timing: courseTiming || "09:00 - 10:30 AM",
         maxCapacity: parseInt(courseMaxCap, 10) || 30,
-        courseDuration: courseDuration || "6 Months",
+        courseDuration: courseDuration === "Custom" ? (customDuration ? `${customDuration} Days` : "Custom") : (courseDuration || "6 Months"),
         startDate: courseStartDate,
         endDate: courseEndDate,
         price: Number(coursePrice) || 0
@@ -272,6 +273,7 @@ export default function AdminDashboard() {
 
       setCourseName("");
       setCourseInstructor("");
+      setCustomDuration("");
       setShowAddCourseModal(false);
     } catch (err: any) {
       console.error("Error creating course:", err);
@@ -873,13 +875,34 @@ export default function AdminDashboard() {
                 </div>
                 <div>
                   <label className="block text-slate-600 mb-1 font-bold">Course Duration</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. 6 Months"
+                  <select
                     value={courseDuration}
                     onChange={e => setCourseDuration(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-xl"
-                  />
+                    className="w-full px-3 py-2 border border-slate-200 rounded-xl bg-white"
+                  >
+                    <option value="1 Month">1 Month</option>
+                    <option value="3 Months">3 Months</option>
+                    <option value="6 Months">6 Months</option>
+                    <option value="9 Months">9 Months</option>
+                    <option value="1 Year">1 Year</option>
+                    <option value="2 Years">2 Years</option>
+                    <option value="3 Years">3 Years</option>
+                    <option value="4 Years">4 Years</option>
+                    <option value="Custom">Custom</option>
+                  </select>
+                  {courseDuration === "Custom" && (
+                    <div className="mt-2 flex items-center gap-2">
+                      <input
+                        type="number"
+                        placeholder="No. of days"
+                        value={customDuration}
+                        onChange={(e) => setCustomDuration(e.target.value)}
+                        className="w-full px-3 py-2 border border-slate-200 rounded-xl bg-white"
+                        min="1"
+                      />
+                      <span className="text-slate-500 font-bold text-xs shrink-0">Days</span>
+                    </div>
+                  )}
                 </div>
               </div>
 

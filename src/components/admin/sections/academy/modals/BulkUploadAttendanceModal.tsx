@@ -37,6 +37,7 @@ export default function BulkUploadAttendanceModal({
       {
         "Student ID": "STU-792205",
         "Student Name": "Student1",
+        "Student Email": "student1@example.com",
         "Class": "Student",
         "Month": "August 2026",
         "Total Working Days": 26,
