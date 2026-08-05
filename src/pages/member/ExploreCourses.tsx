@@ -3,11 +3,11 @@ import { getCurrentMember, getCurrentOrganization } from "../../services/member/
 import {
   getAcademyClasses,
   getClassRegistrations,
-  enrollStudentInClass,
   unenrollStudentFromClass,
   type AcademyClass
 } from "../../services/organization/academyService";
 import { BookOpen, Users, Clock, Calendar, CheckCircle2, Search, Sparkles } from "lucide-react";
+import { supabase } from "../../services/supabase";
 
 export default function ExploreCourses() {
   const member = getCurrentMember();
@@ -40,6 +40,45 @@ export default function ExploreCourses() {
     }
     loadData();
   }, [orgId]);
+   
+  // =====================================================
+  // Load Razorpay Checkout SDK
+  // =====================================================
+  const loadRazorpay = (): Promise<boolean> => {
+    return new Promise((resolve) => {
+      // Already loaded
+      if ((window as any).Razorpay) {
+        resolve(true);
+        return;
+      }
+
+      // Prevent duplicate script
+      const existingScript = document.querySelector(
+        'script[src="https://checkout.razorpay.com/v1/checkout.js"]'
+      );
+
+      if (existingScript) {
+        existingScript.addEventListener("load", () => resolve(true));
+        existingScript.addEventListener("error", () => resolve(false));
+        return;
+      }
+
+      const script = document.createElement("script");
+
+      script.src = "https://checkout.razorpay.com/v1/checkout.js";
+      script.async = true;
+
+      script.onload = () => {
+        resolve(Boolean((window as any).Razorpay));
+      };
+
+      script.onerror = () => {
+        resolve(false);
+      };
+
+      document.body.appendChild(script);
+    });
+  };
 
   const handleEnrollToggle = async (classId: string) => {
     if (!studentId) return;
@@ -68,17 +107,140 @@ export default function ExploreCourses() {
           )
         }));
       } else {
-        const cls = classes.find((c) => c.id === classId);
-        if (cls && classRegs.length >= cls.maxCapacity) {
-          alert("This course is already at full capacity.");
-          return;
+
+    const cls = classes.find(c => c.id === classId);
+
+    if (!cls) return;
+
+    if (classRegs.length >= cls.maxCapacity) {
+        alert("This course is already full.");
+        return;
+    }
+
+    const confirmPurchase = window.confirm(
+        `Enroll in "${cls.className}" for ₹${cls.price} ?`
+    );
+
+    if (!confirmPurchase) return;
+
+    const { data, error } = await supabase.functions.invoke(
+  "student_purchase_course",
+  {
+    body: {
+      courseId: cls.id,
+      studentId,
+      organizationId: orgId,
+    },
+  }
+);
+
+if (error) throw error;
+
+console.log("Enrollment:", data);
+
+const {
+  data: orderData,
+  error: orderError,
+} = await supabase.functions.invoke(
+  "student_create_course_payment_order",
+  {
+    body: {
+      enrollmentId: data.enrollmentId,
+    },
+  }
+);
+
+if (orderError) throw orderError;
+
+if (!orderData?.success) {
+  throw new Error(orderData?.error || "Unable to create payment order.");
+}
+
+const razorpayLoaded = await loadRazorpay();
+
+if (!razorpayLoaded) {
+  alert("Unable to load Razorpay SDK.");
+  return;
+}
+
+const options = {
+  key: orderData.keyId,
+
+  amount: orderData.amount,
+
+  currency: orderData.currency,
+
+  order_id: orderData.orderId,
+
+  name: org?.name,
+
+  description: cls.className,
+
+  modal: {
+  ondismiss: () => {
+    console.log("Payment cancelled");
+  },
+},
+
+  prefill: {
+    name: member?.full_name,
+
+    email: member?.email,
+
+    contact: member?.phone,
+  },
+
+  handler: async (response: any) => {
+  try {
+    const { data: verifyData, error: verifyError } =
+      await supabase.functions.invoke(
+        "student_verify_course_payment",
+        {
+          body: {
+            razorpayOrderId: response.razorpay_order_id,
+            razorpayPaymentId: response.razorpay_payment_id,
+            razorpaySignature: response.razorpay_signature,
+          },
         }
-        await enrollStudentInClass(orgId, classId, studentId);
-        setRegistrations((prev) => ({
-          ...prev,
-          [classId]: Array.from(new Set([...(prev[classId] || []), studentId]))
-        }));
-      }
+      );
+
+    if (verifyError) throw verifyError;
+
+    if (!verifyData?.success) {
+  throw new Error(
+    verifyData?.error || "Payment verification failed."
+  );
+}
+
+    alert("Course purchased successfully.");
+
+    window.location.reload();
+
+  } catch (err) {
+    console.error(err);
+
+    alert("Payment verification failed.");
+  }
+},
+};
+
+const razorpay = new (window as any).Razorpay(
+  options
+);
+
+razorpay.on("payment.failed", (response: any) => {
+  console.error(response.error);
+
+  alert(
+    "Payment Failed\n\n" +
+    response.error.description
+  );
+});
+
+razorpay.open();
+
+    // Razorpay integration comes next
+}
     } catch (err) {
       console.error(err);
       alert("Failed to update enrollment. Please try again.");
@@ -212,7 +374,8 @@ export default function ExploreCourses() {
                       />
                     </div>
                   </div>
-
+                     
+                    
                   {/* Enroll / Unenroll Button */}
                   <button
                     onClick={() => handleEnrollToggle(cls.id)}

@@ -901,6 +901,7 @@ export async function getAcademyClasses(organizationId: string): Promise<Academy
           courseDuration: row.course_duration || row.duration || "6 Months",
           startDate: row.start_date || "2026-08-01",
           endDate: row.end_date || "2027-02-01",
+          price: Number(row.price ?? 0),
           createdAt: row.created_at
         });
       });
@@ -930,6 +931,7 @@ export async function getAcademyClasses(organizationId: string): Promise<Academy
             courseDuration: row.course_duration || "6 Months",
             startDate: row.start_date || "2026-08-01",
             endDate: row.end_date || "2027-02-01",
+            price: Number(row.price ?? 0),
             createdAt: row.created_at
           });
         }
@@ -959,6 +961,7 @@ export async function getAcademyClasses(organizationId: string): Promise<Academy
             courseDuration: row.course_duration || "6 Months",
             startDate: row.start_date || "2026-08-01",
             endDate: row.end_date || "2027-02-01",
+            price: Number(row.price ?? 0),
             createdAt: row.created_at
           });
         });
