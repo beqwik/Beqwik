@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { getCurrentMember, getCurrentOrganization } from "../../services/member/memberAuth";
 import { getMemberSubscriptions } from "../../services/member/memberSubscriptionService";
-import { getGymPlans, type GymPlan } from "../../services/organization/planService";
+import {getGymPlans,type MemberSubscriptionPlan,} from "../../services/organization/planService";
 import { supabase } from "../../services/supabase";
 import { Tag, CheckCircle2, X, ShieldCheck, AlertTriangle } from "lucide-react";
 
@@ -41,7 +41,7 @@ const loadRazorpayScript = (): Promise<boolean> => {
 
 // ─── Confirmation Modal ────────────────────────────────────────────────────────
 interface ConfirmModalProps {
-  plan: GymPlan;
+  plan: MemberSubscriptionPlan;
   onConfirm: () => void;
   onCancel: () => void;
 }
@@ -68,7 +68,7 @@ function ConfirmPurchaseModal({ plan, onConfirm, onCancel }: ConfirmModalProps) 
           <div className="flex justify-between items-center">
             <span className="text-xs text-slate-500 font-medium">Duration</span>
             <span className="text-sm font-bold text-slate-900">
-              {plan.duration_months} Month{plan.duration_months > 1 ? "s" : ""}
+              {Math.round(plan.duration_days / 30)} Month{Math.round(plan.duration_days / 30) > 1 ? "s" : ""}
             </span>
           </div>
           <div className="flex justify-between items-center border-t border-slate-200 pt-3">
@@ -151,13 +151,13 @@ export default function MemberSubscription() {
   const organization = getCurrentOrganization();
 
   const [subscriptions, setSubscriptions] = useState<any[]>([]);
-  const [availablePlans, setAvailablePlans] = useState<GymPlan[]>([]);
+  const [availablePlans, setAvailablePlans] = useState<MemberSubscriptionPlan[]>([]);
   const [loading, setLoading] = useState(true);
   const [paymentLoading, setPaymentLoading] = useState(false);
   const [resolvedOrgId, setResolvedOrgId] = useState<string | null>(null);
 
   // Confirmation modal state
-  const [confirmPlan, setConfirmPlan] = useState<GymPlan | null>(null);
+  const [confirmPlan, setConfirmPlan] = useState<MemberSubscriptionPlan | null>(null);
   const [confirmRenewSub, setConfirmRenewSub] = useState<any>(null);
 
   // ── Fetch data ───────────────────────────────────────────────────────────────
@@ -183,7 +183,7 @@ export default function MemberSubscription() {
         ]);
 
         setSubscriptions(subsData || []);
-        setAvailablePlans((plansData || []).filter((p) => p.is_active !== false));
+        setAvailablePlans((plansData || []).filter((p) => p.active));
       } catch (e) {
         console.error("Failed to load subscription page:", e);
       } finally {
@@ -259,7 +259,7 @@ export default function MemberSubscription() {
   };
 
   // ── Purchase Plan (via edge function to bypass RLS) ──────────────────────────
-  const handlePurchasePlan = async (plan: GymPlan) => {
+ const handlePurchasePlan = async (plan: MemberSubscriptionPlan) => {
     const orgId = resolvedOrgId ?? organization?.id;
     if (!member?.id || !orgId) {
       alert("Could not determine your organization. Please log out and log back in.");
@@ -465,12 +465,12 @@ export default function MemberSubscription() {
                     >
                       <div>
                         <span className="px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-[10px] font-black uppercase tracking-wider">
-                          {plan.duration_months} Month{plan.duration_months > 1 ? "s" : ""} Pass
+                          {Math.round(plan.duration_days / 30)} Month{Math.round(plan.duration_days / 30) > 1 ? "s" : ""} Pass
                         </span>
                         <h3 className="font-black text-slate-900 text-xl mt-3">{plan.name}</h3>
                         <div className="my-3">
                           <span className="text-3xl font-black text-blue-600">₹{plan.price}</span>
-                          <span className="text-xs text-slate-400 font-semibold"> / {plan.duration_months} mo</span>
+                          <span className="text-xs text-slate-400 font-semibold"> / {Math.round(plan.duration_days / 30)} mo</span>
                         </div>
                         {plan.description && (
                           <p className="text-slate-500 text-xs leading-relaxed mt-2 bg-slate-50 p-3 rounded-xl">

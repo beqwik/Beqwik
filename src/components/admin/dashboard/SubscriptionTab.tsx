@@ -1,5 +1,11 @@
 import { useState, useEffect, useCallback } from "react";
-import { getGymPlans, createGymPlan, toggleGymPlanStatus, deleteGymPlan, type GymPlan } from "../../../services/organization/planService";
+import {
+  getGymPlans,
+  createGymPlan,
+  toggleGymPlanStatus,
+  deleteGymPlan,
+  type MemberSubscriptionPlan,
+} from "../../../services/organization/planService";
 import { Plus, Trash2, Tag, Check, ShieldCheck, Users, User, Dumbbell, Home, GraduationCap, Briefcase, UserCheck, CreditCard, Search, Hand, Megaphone, Building2, CheckCircle2 } from "lucide-react";
 
 interface SubscriptionTabProps {
@@ -19,7 +25,7 @@ export default function SubscriptionTab({
   formatDate,
   onGrantSubscription,
 }: SubscriptionTabProps) {
-  const [plans, setPlans] = useState<GymPlan[]>([]);
+  const [plans, setPlans] = useState<MemberSubscriptionPlan[]>([]);
   const [loadingPlans, setLoadingPlans] = useState(false);
   const [showAddPlan, setShowAddPlan] = useState(false);
 
@@ -54,13 +60,20 @@ export default function SubscriptionTab({
     try {
       setAddingPlan(true);
       await createGymPlan({
-        organization_id: organizationId,
-        name: planName,
-        price: parseFloat(planPrice) || 0,
-        duration_months: parseInt(planDuration) || 1,
-        description: planDesc,
-        is_active: true,
-      });
+  organization_id: organizationId,
+  name: planName,
+  price: parseFloat(planPrice) || 0,
+
+  // Convert months to days
+  duration_days: (parseInt(planDuration) || 1) * 30,
+
+  description: planDesc,
+
+  // Gym doesn't use meals
+  meals_per_day: 0,
+
+  active: true,
+});
 
       setShowAddPlan(false);
       setPlanName("");
@@ -69,13 +82,18 @@ export default function SubscriptionTab({
       setPlanDesc("");
 
       await fetchPlans();
-    } catch (err) {
-      console.error(err);
-      alert("Failed to create membership plan tier.");
-    } finally {
-      setAddingPlan(false);
-    }
-  };
+    } catch (err: any) {
+  console.error("Create Plan Error:", err);
+
+  alert(
+    err?.message ||
+    err?.error_description ||
+    JSON.stringify(err)
+  );
+} finally {
+  setAddingPlan(false);
+}
+};
 
   const handleTogglePlan = async (id: string, currentStatus: boolean) => {
     try {
@@ -127,22 +145,23 @@ export default function SubscriptionTab({
                 <div>
                   <div className="flex justify-between items-start">
                     <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-purple-50 text-purple-700">
-                      {p.duration_months} Month{p.duration_months > 1 ? "s" : ""}
+                      {Math.round(p.duration_days / 30)} Month
+{Math.round(p.duration_days / 30) > 1 ? "s" : ""}
                     </span>
                     <button
-                      onClick={() => handleTogglePlan(p.id, p.is_active)}
+                      onClick={() => handleTogglePlan(p.id, p.active)}
                       className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                        p.is_active ? "bg-green-50 text-green-700" : "bg-slate-100 text-slate-400"
+                        p.active ? "bg-green-50 text-green-700" : "bg-slate-100 text-slate-400"
                       }`}
                     >
-                      {p.is_active ? "Active" : "Disabled"}
+                      {p.active ? "Active" : "Disabled"}
                     </button>
                   </div>
 
                   <h4 className="font-extrabold text-slate-900 text-lg mt-2">{p.name}</h4>
                   <div className="text-2xl font-black text-[#e05275] mt-1">
                     {formatCurrency(p.price)}
-                    <span className="text-xs font-normal text-slate-400"> / {p.duration_months} mo</span>
+                     <span> / {Math.round(p.duration_days / 30)} mo</span>
                   </div>
 
                   {p.description && (

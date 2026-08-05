@@ -26,21 +26,28 @@ serve(async (req) => {
 
     // 1. Fetch the gym plan
     const { data: plan, error: planErr } = await supabase
-      .from("gym_plans")
-      .select("*")
-      .eq("id", gymPlanId)
-      .eq("organization_id", organizationId)
-      .eq("is_active", true)
-      .single();
+  .from("member_subscription_plans")
+  .select("*")
+  .eq("id", gymPlanId)
+  .eq("organization_id", organizationId)
+  .eq("active", true)
+  .maybeSingle();
 
-    if (planErr || !plan) {
-      throw new Error(planErr?.message ?? "Gym plan not found or inactive.");
-    }
+
+if (planErr) {
+  throw planErr;
+}
+
+if (!plan) {
+  throw new Error(
+    `Plan not found. gymPlanId=${gymPlanId}, organizationId=${organizationId}`
+  );
+}
 
     // 2. Calculate dates
     const startDate = new Date();
-    const endDate = new Date();
-    endDate.setMonth(endDate.getMonth() + plan.duration_months);
+    const endDate = new Date(startDate);
+    endDate.setDate(endDate.getDate() + plan.duration_days);
 
     // 3. Insert pending subscription (service role bypasses RLS)
     const { data: subscription, error: subErr } = await supabase
@@ -48,7 +55,7 @@ serve(async (req) => {
       .insert({
         organization_id: organizationId,
         member_id: memberId,
-        subscription_plan_id: gymPlanId, // store gym_plan id here
+        subscription_plan_id: plan.id, // store gym_plan id here
         amount: plan.price,
         amount_paid: 0,
         start_date: startDate.toISOString(),

@@ -195,18 +195,50 @@ function SelectPlan() {
 
       // Load Razorpay Script
       const isLoaded = await loadRazorpayScript();
+
+      console.log("===============");
+console.log("Organization:", organizationId);
+console.log("Plan:", plan.id);
+console.log("===============");
+
+      const { data, error } =
+  await supabase.functions.invoke(
+    "organization_create_payment_order",
+    {
+      body: {
+        organizationId,
+        subscriptionPlanId: plan.id,
+      },
+    }
+  );
+
+console.log("DATA");
+console.log(data);
+
+console.log("ERROR");
+console.log(error);
+
+if (error) {
+  console.log(await error.context.text());
+}
+
+if (!data.success) {
+  console.log(data);
+  throw new Error(JSON.stringify(data));
+}
+
       if (!isLoaded) {
         alert("Failed to load Razorpay SDK. Please check your internet connection.");
         return;
       }
 
-      // Read Razorpay Key ID from env
-      const rzpKeyId = import.meta.env.VITE_RAZORPAY_KEY_ID || "rzp_test_mockkey";
+      
 
       const options = {
-        key: rzpKeyId,
-        amount: Math.round(plan.monthly_price * 100), // amount in paise
-        currency: "INR",
+    key: data.keyId,
+    order_id: data.orderId,
+    amount: data.amount,
+    currency: data.currency,
         name: "Beqwik",
         description: `${plan.name} Plan Subscription`,
         theme: {

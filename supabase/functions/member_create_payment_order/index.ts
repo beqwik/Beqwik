@@ -49,6 +49,12 @@ const {
   .eq("id", subscriptionId)
   .single();
 
+  console.log("========== SUBSCRIPTION ==========");
+console.log("Subscription ID:", subscription?.id);
+console.log("Organization ID:", subscription?.organization_id);
+console.log("Member ID:", subscription?.member_id);
+console.log("Plan ID:", subscription?.subscription_plan_id);
+
 if (subscriptionError || !subscription) {
   throw new Error(
     subscriptionError?.message ??
@@ -61,6 +67,7 @@ if (subscription.status !== "pending") {
     "Only pending subscriptions can be paid."
   );
 }
+
 
 // =====================================================
 // Check Existing Pending Transaction
@@ -97,6 +104,10 @@ const {
   )
   .single();
 
+  console.log("========== RAZORPAY CONFIG ==========");
+console.log("Config Organization:", razorpayConfig?.organization_id);
+console.log("Razorpay Key:", razorpayConfig?.razorpay_key_id);
+
 if (
   razorpayConfigError ||
   !razorpayConfig
@@ -128,6 +139,17 @@ console.log(
   "Amount:",
   Math.round(Number(subscription.amount) * 100)
 );
+
+console.log("======================================");
+console.log("PAYMENT ROUTING TEST");
+console.log("Organization ID :", subscription.organization_id);
+console.log("Member ID       :", subscription.member_id);
+console.log("Using Key ID    :", razorpayConfig.razorpay_key_id);
+console.log(
+  "Secret Length   :",
+  razorpayConfig.razorpay_key_secret.length
+);
+console.log("======================================");
 
 order = await createOrder(
   razorpayConfig.razorpay_key_id.trim(),

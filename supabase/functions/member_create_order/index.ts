@@ -23,6 +23,15 @@ serve(async (req) => {
       memberPlanId,
     } = await req.json();
 
+    console.log("========== REQUEST ==========");
+console.log("memberId:", memberId);
+console.log("organizationId:", organizationId);
+console.log("memberPlanId:", memberPlanId);
+
+console.log("========== RAZORPAY CONFIG ==========");
+console.log("Config Organization:", razorpayConfig.organization_id);
+console.log("Key:", razorpayConfig.razorpay_key_id);
+
     if (!memberId) {
       throw new Error("memberId is required.");
     }
