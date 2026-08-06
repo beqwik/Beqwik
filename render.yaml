@@ -1,8 +1,9 @@
 services:
-  - type: static
+  - type: web
     name: beqwik-frontend
+    runtime: static
     buildCommand: npx vite build
-    publishPath: dist
+    staticPublishPath: dist
     routes:
       # Rewrite all routes to index.html for client-side routing (React Router)
       - type: rewrite
