@@ -116,7 +116,7 @@ serve(async (req) => {
       .from("subscriptions")
       .update({
         status: "active",
-        payment_status: "success",
+        payment_status: "paid",
         amount_paid: sub.amount,
       })
       .eq("id", subscriptionId)
@@ -138,7 +138,7 @@ serve(async (req) => {
         transaction_id: paymentId,
         amount: sub.amount,
         payment_gateway: "razorpay",
-        payment_status: "success",
+        payment_status: "paid",
         paid_at: today.toISOString(),
       })
       .select()

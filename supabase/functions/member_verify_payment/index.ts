@@ -286,7 +286,7 @@ serve(async (req) => {
 
           payment_gateway: "razorpay",
 
-          payment_status: "success",
+          payment_status: "paid",
 
           paid_at: new Date().toISOString(),
 

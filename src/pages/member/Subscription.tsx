@@ -199,19 +199,34 @@ export default function MemberSubscription() {
     (s) => s.status !== "active" && s.status !== "pending" && s.payment_status !== "pending"
   );
 
+  // Helper to extract true error message from Supabase Edge Function HTTP errors
+  const parseEdgeFunctionError = async (err: any): Promise<string> => {
+    if (!err) return "An unknown error occurred.";
+    try {
+      if (err.context && typeof err.context.json === "function") {
+        const body = await err.context.json();
+        if (body?.error) return body.error;
+      }
+    } catch (_) {}
+    return err.message || "An error occurred.";
+  };
+
   // ── Razorpay Payment Trigger ─────────────────────────────────────────────────
   const handlePay = async (sub: any) => {
     if (!sub) return;
     setPaymentLoading(true);
     try {
       const loaded = await loadRazorpayScript();
-      if (!loaded) { alert("Failed to load Razorpay SDK."); return; }
+      if (!loaded) { alert("Failed to load Razorpay SDK."); setPaymentLoading(false); return; }
 
       const { data, error } = await supabase.functions.invoke("member_create_payment_order", {
         body: { subscriptionId: sub.id },
       });
 
-      if (error) throw error;
+      if (error) {
+        const msg = await parseEdgeFunctionError(error);
+        throw new Error(msg);
+      }
       if (!data?.success) throw new Error(data?.error ?? "Unable to create payment order.");
 
       const options = {
@@ -235,7 +250,10 @@ export default function MemberSubscription() {
                 razorpaySignature: response.razorpay_signature,
               },
             });
-            if (verify.error) throw verify.error;
+            if (verify.error) {
+              const msg = await parseEdgeFunctionError(verify.error);
+              throw new Error(msg);
+            }
             if (!verify.data?.success) throw new Error(verify.data?.error ?? "Payment verification failed.");
 
             alert("✅ Payment Successful! Your subscription is now Active.");
@@ -276,7 +294,10 @@ export default function MemberSubscription() {
         },
       });
 
-      if (error) throw error;
+      if (error) {
+        const msg = await parseEdgeFunctionError(error);
+        throw new Error(msg);
+      }
       if (!data?.success) throw new Error(data?.error ?? "Failed to create subscription.");
 
       // Now trigger Razorpay with the new subscriptionId

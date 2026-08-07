@@ -11,7 +11,8 @@ const corsHeaders = {
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
-  }
+  } 
+
 
   try {
     const body = await req.json();
@@ -21,6 +22,7 @@ serve(async (req) => {
       Deno.env.get("PROJECT_URL")!,
       Deno.env.get("SERVICE_ROLE_KEY")!
     );
+
 
     // ── Find organization ──────────────────────────────
     const { data: organization, error: orgError } = await supabase
@@ -78,6 +80,18 @@ serve(async (req) => {
 
         if (gmError) throw new Error("Gym member create error: " + gmError.message);
         member = newGymMember;
+
+        // Also insert into generic members table with same ID to satisfy legacy FK constraints
+        await supabase.from("members").upsert(
+          {
+            id: newGymMember.id,
+            full_name: fullName,
+            email,
+            phone,
+            active: true,
+          },
+          { onConflict: "id" }
+        );
       }
     } else {
       // NON-GYM PATH: use shared members table (existing logic)

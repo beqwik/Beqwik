@@ -49,6 +49,46 @@ if (!plan) {
     const endDate = new Date(startDate);
     endDate.setDate(endDate.getDate() + plan.duration_days);
 
+    // Ensure member exists in generic members table to satisfy legacy FK constraint subscriptions_member_id_fkey
+    const { data: existingMember } = await supabase
+      .from("members")
+      .select("id")
+      .eq("id", memberId)
+      .maybeSingle();
+
+    if (!existingMember) {
+      const { data: gymMember } = await supabase
+        .from("gym_members")
+        .select("*")
+        .eq("id", memberId)
+        .maybeSingle();
+
+      if (gymMember) {
+        await supabase.from("members").insert({
+          id: gymMember.id,
+          email: gymMember.email,
+          full_name: gymMember.full_name,
+          phone: gymMember.phone,
+          active: true,
+        });
+      } else {
+        const { data: cred } = await supabase
+          .from("member_credentials")
+          .select("*")
+          .eq("member_id", memberId)
+          .maybeSingle();
+
+        if (cred) {
+          await supabase.from("members").insert({
+            id: memberId,
+            email: cred.email,
+            full_name: "Gym Member",
+            active: true,
+          });
+        }
+      }
+    }
+
     // 3. Insert pending subscription (service role bypasses RLS)
     const { data: subscription, error: subErr } = await supabase
       .from("subscriptions")
